@@ -228,3 +228,39 @@ if (writeWallHeatFlux)
     wallHeatFlux.writeOpt() = IOobject::AUTO_WRITE;
 }
 
+//- Translational-rotational wall heat flux
+volScalarField wallHeatFlux_tr
+(
+    IOobject
+    (
+        "wallHeatFlux_tr",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("wallHeatFlux_tr", dimensionSet(1, 0, -3, 0, 0), 0.0)
+);
+
+//- Vibrational-electronic wall heat flux
+volScalarField wallHeatFlux_ve
+(
+    IOobject
+    (
+        "wallHeatFlux_ve",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("wallHeatFlux_ve", dimensionSet(1, 0, -3, 0, 0), 0.0)
+);
+
+if (writeWallHeatFlux)
+{
+    wallHeatFlux_tr.writeOpt() = IOobject::AUTO_WRITE;
+    wallHeatFlux_ve.writeOpt() = IOobject::AUTO_WRITE;
+}
+

@@ -88,6 +88,8 @@ if (writeWallHeatFlux)
         if (isA<wallFvPatch>(mesh.boundary()[patchi]))
         {
             wallHeatFlux.boundaryFieldRef()[patchi] = patchHeatFlux[patchi];
+            wallHeatFlux_tr.boundaryFieldRef()[patchi] = heatFlux_convtr.boundaryField()[patchi];
+            wallHeatFlux_ve.boundaryFieldRef()[patchi] = heatFlux_convve.boundaryField()[patchi];
 
             const scalar int_tot_whf =
                 gSum
@@ -136,6 +138,8 @@ if (writeWallHeatFlux)
     Info<< endl;
 
     wallHeatFlux.write();
+    wallHeatFlux_tr.write();
+    wallHeatFlux_ve.write();
 }
 
 
