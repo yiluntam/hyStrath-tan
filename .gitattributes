@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.C text eol=lf
+*.H text eol=lf
+*.c text eol=lf
+*.h text eol=lf
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.options text eol=lf
+*.files text eol=lf
