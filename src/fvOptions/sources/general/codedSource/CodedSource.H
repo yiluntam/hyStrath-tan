@@ -234,7 +234,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "CodedSource.C"
+    #include "CodedSourceImpl.C"
     #include "CodedSourceIO.C"
 #endif
 

@@ -218,7 +218,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "SemiImplicitSource.C"
+    #include "SemiImplicitSourceImpl.C"
     #include "SemiImplicitSourceIO.C"
 #endif
 
