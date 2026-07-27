@@ -112,7 +112,7 @@ void AUSMFlux
     // c_pos = cSf_pos / |Sf|, c_neg = cSf_neg / |Sf|
     const scalar c_pos = cSf_pos / magSf;
     const scalar c_neg = cSf_neg / magSf;
-    const scalar c_half = sqrt(c_pos * c_neg);
+    const scalar c_half = ::sqrt(c_pos * c_neg);
 
     // --- Left/Right Mach numbers ---
     const scalar M_L = un_pos / c_half;
@@ -175,8 +175,6 @@ void AUSMFlux
     const scalar H_upwind = e_upwind + p_upwind/rho_upwind;
 
     // --- Face fluxes ---
-    // Relative velocity at face (for kinetic energy in mesh-moving case)
-    const scalar un_upwind = U_upwind & n - mesh_un;
 
     // Density flux: ṁ * |Sf|
     rhoFlux = mDot * magSf;
