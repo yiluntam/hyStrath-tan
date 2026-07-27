@@ -1,0 +1,39 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      initialConditions;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// 初始条件和边界值模板 — 所有 0/ 场的变量集中定义在此
+// 修改此文件即可同时更新所有场的初值
+
+// -- 自由流温度 --
+Ttr       100;            // 平动温度 [K]
+Tve       2600;           // 振动温度 [K]
+TveAtom   0;              // 原子振动温度 [K] (无原子气体设为 0)
+Twall     300;            // 壁面温度 [K]
+
+// -- 自由流压力与密度 --
+pressureInlet  1.63;      // 入口压力 [Pa]
+pressureField  $pressureInlet;
+rhoInlet       5.493e-5;  // 入口密度 [kg/m³] (需与 P, T 自洽: ρ = P/(R·T))
+
+// -- 速度 --
+velocityInlet  2446.1;    // 入口速度 x 分量 [m/s]
+velocityField  ($velocityInlet 0 0);
+velocityWall   (0 0 0);   // 壁面无滑移
+
+// -- 组分质量分数 (总和 = 1.0) --
+Y_N2      1.0;            // N2 质量分数 (单组分 = 1.0)
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

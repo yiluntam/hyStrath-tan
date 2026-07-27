@@ -1,0 +1,30 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      wallHeatFlux;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 壁面热流 — 输出字段 (运行时由 hy2Foam 计算并写入)
+
+dimensions      [1 0 -3 0 0 0 0];  // kg/s³ = W/m²
+
+internalField   uniform 0;
+
+boundaryField
+{
+    INLET           { type zeroGradient; }
+    WALL            { type zeroGradient; }
+    #include "include/boundaries"
+}
+
+// ************************************************************************* //

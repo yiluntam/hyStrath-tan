@@ -1,0 +1,99 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ---- 线性求解器设置 ----
+// solver 可用类型:
+//   diagonal     — 对角求解器 (显式变量, rho/rhoU/rhoE/rhoEv)
+//   smoothSolver — 光滑求解器 (需指定 smoother)
+//   PBiCG        — 预条件双共轭梯度 (需指定 preconditioner)
+//   PCG          — 预条件共轭梯度
+//   GAMG         — 几何代数多重网格
+//
+// smoother 可用类型 (配合 smoothSolver):
+//   GaussSeidel  — Gauss-Seidel 迭代
+//   DILU         — 对角不完全 LU
+//   DIC          — 对角不完全 Cholesky
+//
+// preconditioner 可用类型 (配合 PBiCG/PCG):
+//   DILU  — 对角不完全 LU (推荐用于 Yi)
+//   DIC   — 对角不完全 Cholesky
+//   GAMG  — 几何代数多重网格
+
+solvers
+{
+    // 守恒变量 (rho, rhoU, rhoE, rhoEv*) — 显式处理, 无需迭代
+    "(rho|rhoU|rhoE|rhoEv.*)"
+    {
+        solver          diagonal;
+    }
+
+    // 速度
+    U
+    {
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        nSweeps         2;
+        tolerance       1e-09;
+        relTol          0.0001;
+    }
+
+    // 能量 (h, e 及其衍生)
+    "(h|e).*"
+    {
+        $U;
+        tolerance       1e-10;
+        relTol          1e-3;
+        minIter         1;
+        maxIter         400;
+    }
+
+    // 组分质量分数
+    Yi
+    {
+        solver          PBiCG;
+        preconditioner  DILU;
+        tolerance       1e-12;
+        relTol          0;
+        maxIter         10;
+    }
+
+    // 湍流变量 (选用 RANS 时需要)
+    "(k|omega|epsilon)"
+    {
+        $U;
+        tolerance       1e-15;
+        relTol          1e-7;
+        minIter         1;
+        maxIter         20;
+    }
+}
+
+// ---- 松弛因子 (可选) ----
+// relaxationFactors
+// {
+//     fields
+//     {
+//         p       0.3;
+//         U       0.7;
+//     }
+//     equations
+//     {
+//         "(k|omega|epsilon)"   0.7;
+//     }
+// }
+
+// ************************************************************************* //

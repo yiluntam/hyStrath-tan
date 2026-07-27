@@ -1,0 +1,64 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      turbulenceProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ---- 流动类型 ----
+// simulationType:
+//   laminar — 层流 (高超声速非平衡流常用)
+//   RAS     — 雷诺平均 Navier-Stokes (RANS)
+//   LES     — 大涡模拟
+//   DES     — 分离涡模拟
+simulationType  laminar;
+
+// ---- RAS 湍流模型 (仅 simulationType RAS 时有效) ----
+// RASModel (可压缩 RANS 模型):
+//   SpalartAllmaras — 单方程 SA 模型 (航空航天常用)
+//   kEpsilon        — 标准 k-ε
+//   RNGkEpsilon     — RNG k-ε
+//   realizableKE    — Realizable k-ε
+//   kOmega          — 标准 k-ω
+//   kOmegaSST       — k-ω SST (混合模型, 推荐)
+//   kOmegaSSTSAS    — k-ω SST-SAS (尺度自适应)
+//   kOmegaSSTLM     — k-ω SST + γ-Reθ 转捩模型
+//   v2f             — v²-f 模型 (近壁精确)
+//   LRR             — Launder-Reece-Rodi RSM
+//   SSG             — Speziale-Sarkar-Gatski RSM
+//   buoyantKEpsilon — 浮力修正 k-ε
+//   LaunderSharmaKE — Launder-Sharma 低 Re k-ε
+RAS
+{
+    RASModel        kOmegaSST;
+
+    turbulence      on;
+
+    printCoeffs     off;
+}
+
+// ---- LES 湍流模型 (仅 simulationType LES/DES 时有效) ----
+// LESModel:
+//   Smagorinsky, WALE, kEqn, dynamicKEqn, dynamicLagrangian,
+//   SpalartAllmarasDES/DDES/IDDES, kOmegaSSTDES/DDES/IDDES,
+//   DeardorffDiffStress
+LES
+{
+    LESModel        Smagorinsky;
+
+    turbulence      on;
+
+    printCoeffs     off;
+}
+
+// ************************************************************************* //

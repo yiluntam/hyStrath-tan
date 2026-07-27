@@ -1,5 +1,12 @@
 
-if (fluxScheme == "Kurganov" or fluxScheme == "Tadmor")
+if
+(
+    fluxScheme == "Kurganov"
+ or fluxScheme == "Tadmor"
+ or fluxScheme == "MUSCL_AUSM"
+ or fluxScheme == "WENOZ_AUSM"
+ or fluxScheme == "WENOZ7_AUSM"
+)
 {
     label pDListSizes = phiEvk.size();
     if(downgradeSingleT or downgradeSingleTv)

@@ -1,0 +1,113 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      chemistryProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ---- 化学反应求解器 ----
+// chemistrySolver:
+//   Euler2Implicit     — 隐式欧拉 (推荐, 稳定性好)
+//   no2ChemistrySolver — 关闭化学求解器
+chemistryType
+{
+    chemistrySolver   Euler2Implicit;
+    chemistryThermo   rho2;
+}
+
+// ---- 化学反应开关 ----
+// chemistry:
+//   on  — 开启有限速率化学反应
+//   off — 冻结流 (无反应, 更快)
+chemistry           off;
+
+// 初始化学时间步长 (仅 chemistry on 时有效)
+initialChemicalTimeStep 1.0e-9;
+
+// ---- 隐式欧拉求解器参数 ----
+Euler2ImplicitCoeffs
+{
+    // cTauChem: 伪时间步长缩放因子, 越大越稳定但精度降低
+    cTauChem        1.0;
+    // equilibriumRateLimiter: 平衡态速率限制器
+    equilibriumRateLimiter off;
+}
+
+// ---- 修正温度 (用于低温区数值稳定) ----
+// modifiedTemperature:
+//   on  — 限制低温区反应速率 (T < Tmin 时平滑截断)
+//   off — 不修正
+modifiedTemperature off;
+modifiedTemperatureCoeffs
+{
+    Tmin      800.0;    // 截断起始温度 (K)
+    epsilon   80.0;     // 平滑参数
+}
+
+// ---- 化学-振动耦合模型 ----
+// chemistryVibrationCoupling.model:
+//   none    — 无耦合 (化学与振动能量无关)
+//   ParkTTv — Park T-Tv 双温度模型 (标准选项, 用于离解-振动耦合)
+//   CVDV    — 耦合振动-离解-振动模型 (更精细)
+//
+// ParkTTvCoeffs.sourceTermModel:
+//   preferential    — 优先离解模型 (高振动能级优先离解)
+//   nonPreferential — 非优先模型 (各振动能级等概率离解)
+//
+// preferentialModel.factorType:
+//   constant   — 常数优先因子 (需 constantFactor)
+//   lineFitted — 按组分物种的线性拟合 (需 lineFittedCoeffs)
+chemistryVibrationCoupling
+{
+    model ParkTTv;
+
+    ParkTTvCoeffs
+    {
+        exponentTtr         0.7;          // 平动温度指数
+        sourceTermModel     preferential; // 优先离解模型
+
+        preferentialModel
+        {
+            factorType      constant;
+            constantFactor  0.3;
+
+            // 或使用线性拟合 (Holman and Boyd, 2011)
+            lineFittedCoeffs
+            {
+                vibFactor
+                {
+                    N2          (5.772e-6 0.162);
+                    O2          (1.136e-5 0.166);
+                    NO          (9.582e-5 0.190);
+                }
+            }
+        }
+    }
+
+    // CVDV 耦合参数 (仅 model CVDV 时有效)
+    CVDVCoeffs
+    {
+        reciprocalU     3;
+        simpleHarmonicOscillatorVibCutOff
+        {
+            N2   34;
+            O2   27;
+            NO   28;
+            N2+  34;
+            O2+  27;
+            NO+  28;
+        }
+    }
+}
+
+// ************************************************************************* //

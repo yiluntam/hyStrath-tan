@@ -1,0 +1,85 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ---- 求解器与时间控制 ----
+application     hy2Foam;
+
+// startFrom (起始方式):
+//   firstTime — 从最早的 time 目录开始
+//   startTime — 从指定 startTime 开始
+//   latestTime — 从最新的 time 目录续算
+startFrom       startTime;
+startTime       0;
+
+// stopAt (终止条件):
+//   endTime    — 达到 endTime 时停止
+//   writeNow   — 完成当前写操作后停止
+//   noWriteNow — 立即停止 (不写当前步)
+//   nextWrite  — 下一次写操作时停止
+stopAt          endTime;
+endTime         1.0e-5;           // 终止时间 (s)
+
+deltaT          1.0e-10;          // 初始时间步长 (s)
+
+// ---- 输出控制 ----
+// writeControl:
+//   timeStep         — 每 N 步输出一次
+//   runTime          — 每 N 秒物理时间输出一次
+//   adjustableRunTime — 按物理时间输出 (自动调整以匹配时间步边界)
+//   cpuTime          — 每 N 秒 CPU 时间输出一次
+//   clockTime        — 每 N 秒挂钟时间输出一次
+writeControl    adjustableRunTime;
+writeInterval   1.0e-4;            // 输出间隔 (s)
+purgeWrite      10;                // 最多保留的输出目录数 (0 = 全部保留)
+
+// writeFormat:
+//   ascii  — 文本格式 (人类可读)
+//   binary — 二进制格式 (更快, 更省空间)
+writeFormat     ascii;
+writePrecision  6;
+writeCompression off;
+
+// timeFormat:
+//   fixed       — 固定小数位数
+//   scientific  — 科学计数法
+//   general     — 自动选择 (推荐)
+timeFormat      general;
+timePrecision   10;
+runTimeModifiable true;
+
+// ---- 自适应时间步 ----
+adjustTimeStep  yes;
+// maxCo: 最大 Courant 数
+//   Kurganov/Tadmor: 通常 0.2-0.5
+//   MUSCL_AUSM/WENOZ_AUSM: 可用 0.5-0.8
+maxCo           0.2;
+maxDeltaT       1.0e-5;           // 最大允许时间步 (s)
+
+// ---- 加载 strath 有限体积库 (提供非标准 BC) ----
+libs ("libstrathFiniteVolume.so");
+
+// ---- 运行时函数对象 ----
+functions
+{
+    // 示例: 输出气动力
+    // #include "forces"
+
+    // 示例: 输出表面量 (热流、剪切应力等)
+    // #include "surfaceQuantities"
+}
+
+// ************************************************************************* //

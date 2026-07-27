@@ -1,0 +1,119 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      transportProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ---- 稀薄气体参数 ----
+rarefiedParameters
+{
+    computeFieldAndBoundaries      false;
+    computeMfpBoundaries           true;
+
+    // mfpModel (平均自由程模型):
+    //   maxwellian        — Maxwell 平均自由程
+    //   hardSphere        — 硬球模型
+    //   variableHardSphere — 变径硬球模型 (推荐, VHS)
+    mfpModel                       variableHardSphere;
+    writeMfpSpecies                off;       // 输出各组分平均自由程
+    writeMfpMixture                on;        // 输出混合物平均自由程
+
+    characteristicLength           2.0;       // 特征长度 (m), 用于 Kn = λ/L
+    writeKn_overall                off;       // 输出整体 Knudsen 数
+
+    writeKnGLL                     on;        // 输出梯度局部长度 Knudsen 数
+    writeKnGLL_components          off;
+}
+
+// ---- 输运模型 ----
+transportModels
+{
+    viscosityAndThermalConductivityModels   "see thermophysicalProperties";
+
+    // mixingRule (混合物输运系数混合规则):
+    //   molar        — 摩尔分数加权
+    //   Wilke        — Wilke 混合规则
+    //   ArmalySutton — Armaly-Sutton 混合规则 (高超声速推荐)
+    mixingRule                     molar;
+    writeViscositySpecies          off;
+    writeViscosityMixture          off;
+    writeThermalConducSpecies      off;
+    writeThermalConducMixture      off;
+
+    writeWallHeatFlux              on;        // 输出壁面热流
+
+    // multiSpeciesTransport (多组分扩散模型):
+    //   noSpeciesDiffusion — 无扩散 (单组分或均匀混合近似)
+    //   Fick              — Fick 定律扩散 (需 LewisNumber)
+    //   SCEBD             — 自伴随有效二元扩散 (多组分精确扩散)
+    //   LewisNumber        — 常数 Lewis 数扩散
+    multiSpeciesTransport          noSpeciesDiffusion;
+
+    // binaryDiffusionModel (二元扩散系数模型):
+    //   noBinaryDiffusionModel     — 无二元扩散
+    //   constantBinaryDiffusionModel — 常数扩散系数 (需 constantBinaryDiffusionModelCoefficients)
+    //   collisionData              — 列表碰撞数据 (需 collisionData 字典 + collisionDataModel)
+    //   Stephani                  — Stephani 离散扩散模型
+    binaryDiffusionModel           noBinaryDiffusionModel;
+
+    // correctedArmalySutton: Armaly-Sutton 混合规则的修正
+    correctedArmalySutton          on;
+
+    diffusionModelParameters
+    {
+        // addPressureGradientTerm: 压力梯度驱动扩散
+        addPressureGradientTerm        off;
+        // addTemperatureGradientTerm: Soret 热扩散效应
+        addTemperatureGradientTerm     off;
+
+        LewisNumber                    1.4;   // Lewis 数 (仅 Fick 模式)
+
+        // collisionDataModel (碰撞数据来源, 仅 binaryDiffusionModel == collisionData):
+        //  D 型 (Dbar 扩散系数拟合):
+        //   Gupta1989D  — NASA TM-101528 (1989), Dbar 拟合
+        //   Gupta1990D  — NASA RP-1232 (1990), Dbar 拟合
+        //  O 型 (Omega11/Omega22 碰撞积分):
+        //   Gupta1989O  — NASA TM-101528, Omega 碰撞积分
+        //   Gupta1990O  — NASA RP-1232, Omega 碰撞积分
+        //   Wright2005O — Wright et al. AIAA 2005 (推荐, 更精确)
+        collisionDataModel    "Gupta1989D";
+
+        constantBinaryDiffusionModelCoefficients
+        {
+            allSpecies                 1.0e-5; // 常数扩散系数 (m²/s)
+        }
+    }
+}
+
+// ---- 碰撞积分数据 ----
+// 完整数据请参考:
+//   run/hyStrath/hy2Foam/genericCase/constant/transportProperties
+// 该文件包含 Gupta1989/1990 和 Wright2005 的完整碰撞积分表。
+//
+// 下面是纯 N2 的简化示例 (Gupta1989D, Dbar 项):
+collisionData
+{
+    tabulatedInteractions
+    {
+        Gupta1989D
+        {
+            Dbar
+            {
+                N2_N2   (0 0.0112 1.6182 -11.3091);
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

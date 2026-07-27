@@ -1,0 +1,104 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ---- 通量格式 ----
+// 可选: Kurganov, Tadmor, MUSCL_AUSM, WENOZ_AUSM, WENOZ7_AUSM
+//   Kurganov/Tadmor:   2 阶中心格式 (Riemann-free), 配合 vanLeer 限制器
+//   MUSCL_AUSM:        3 阶 MUSCL (κ=1/3, van Albada 限制器) + AUSM+-up 通量
+//   WENOZ_AUSM:        5 阶 WENO-Z (Borges 2008) + AUSM+-up 通量
+//   WENOZ7_AUSM:       7 阶 WENO-Z + AUSM+-up 通量
+// 注: AUSM 系列仅适用于结构化网格 (blockMesh 六面体),
+//     非轴对齐面自动回退为 1 阶 upwind
+fluxScheme            Kurganov;
+
+// ---- 时间离散 ----
+// 可选: Euler, localEuler, CrankNicolson 1, backward
+ddtSchemes
+{
+    default           Euler;
+}
+
+// ---- 梯度格式 ----
+// gradSchemes (梯度离散):
+//   Gauss linear              — 2 阶中心差分 (默认)
+//   fourth                    — 4 阶紧致梯度 (需结构化六面体网格)
+//   sixth                     — 6 阶紧致梯度 (需结构化六面体网格, 实验性)
+//   leastSquares              — 最小二乘法 (适用于非结构/多面体网格)
+//   cellLimited Gauss linear 1 — 带限制器的 2 阶梯度 (激波附近稳定)
+//   cellMDLimited Gauss linear 1 — 多维限制器版本
+gradSchemes
+{
+    default           Gauss linear;
+  //grad(U)           cellLimited Gauss linear 1;  // 激波附近稳定
+}
+
+// ---- 散度格式 ----
+divSchemes
+{
+    default           none;                   // hy2Foam 不通过 div 计算对流
+    div(tauMC)        Gauss linear;           // 粘性应力散度
+    div(phi,U)        Gauss limitedLinearV 1; // 速度对流 (非 hy2Foam 主路径)
+
+    // 组分扩散通量
+    div(diffusiveFluxes)   Gauss linear;
+    div(phi,Yi_h)     Gauss limitedLinear 1;
+
+    // 湍流模型 (选用 RANS 时需要)
+    div(phi,k)        Gauss limitedLinear 1;
+    div(phi,omega)    Gauss limitedLinear 1;
+    div(phi,epsilon)  Gauss limitedLinear 1;
+
+    // 电子存在时压力膨胀项
+    div(U)            Gauss linear;
+}
+
+// ---- Laplacian 格式 ----
+laplacianSchemes
+{
+    default           Gauss linear corrected;
+}
+
+// ---- 插值格式 ----
+// interpolationSchemes:
+//   default: linear / cubic / midpoint
+//   reconstruct(rho), reconstruct(U), reconstruct(T):
+//     linear  — 2 阶中心插值
+//     vanLeer — van Leer TVD 限制器
+//     vanLeerV — van Leer 矢量限制器 (用于速度)
+//
+// 注: 使用 MUSCL_AUSM / WENOZ_AUSM / WENOZ7_AUSM 时,
+//     内部面值由 MUSCL_WENO_Reconstruct.H 覆写,
+//     reconstruct 设置仅影响:
+//       (1) 非轴对齐面的内部面 (dirTag==0, 保留 upwind 结果)
+//       (2) 边界面 (wall 为 zeroGradient, 实际不受 reconstruct 影响)
+//     Kurganov/Tadmor 模式则完全依赖此段设置
+interpolationSchemes
+{
+    default           linear;
+    reconstruct(rho)  vanLeer;
+    reconstruct(U)    vanLeerV;
+    reconstruct(T)    vanLeer;
+}
+
+// ---- 面法向梯度格式 ----
+// 可选: corrected, uncorrected, limited 0.5, orthogonal
+snGradSchemes
+{
+    default          corrected;
+}
+
+// ************************************************************************* //

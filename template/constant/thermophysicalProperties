@@ -1,0 +1,98 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ---- 热物理模型类型 ----
+// thermoType.type:
+//   heRho2Thermo — 密度基双温度热物理 (hy2Foam 唯一选项)
+//
+// thermoType.mixture:
+//   reacting2Mixture           — 多组分反应混合物 (标准选项)
+//   multi2ComponentMixture     — 多组分非反应混合物
+//   basic2MultiComponentMixture — 基础多组分混合物
+//   pureMixture                — 单组分
+//
+// thermoType.transport:
+//   constant     — 常数输运系数 (最简单)
+//   sutherland   — Sutherland 黏度 + Eucken 热导率
+//   blottnerEucken — Blottner 黏度 + Eucken 热导率 (高超声速推荐)
+//   powerLawEucken — 幂律黏度 + Eucken 热导率
+//   CEA          — CEA/NASA 黏度与热导率关联式
+//   tabulated    — 列表输运 (可能不稳定)
+//   tabulatedKnT — 列表输运 + Kn/T 关联
+//   注: 所有 transport 模型均内置 Eucken 热导率关系
+//
+// thermoType.thermo:
+//   decoupledEnergyModes — 平动-振动-电子能量解耦 (hyStrath 多温度默认)
+//
+// thermoType.energy:
+//   sensible2InternalEnergy — 显内能形式 (hyStrath DEM 唯一选项)
+//
+// thermoType.equationOfState:
+//   perfect2Gas — 完全气体 (hyStrath DEM 唯一选项)
+//
+// thermoType.specie:
+//   advancedSpecie — 高级组分 (含振动模式、离解势、电子能级) (唯一选项)
+thermoType
+{
+    type            heRho2Thermo;
+    mixture         reacting2Mixture;
+    transport       constant;
+    thermo          decoupledEnergyModes;
+    energy          sensible2InternalEnergy;
+    equationOfState perfect2Gas;
+    specie          advancedSpecie;
+}
+
+// ---- 轻量化模式 ----
+// hyLight:
+//   yes — 假设准中性, 不求解电子组分
+//   no  — 包含电子组分
+hyLight yes;
+
+// ---- 温度耦合降级 ----
+// downgradeToSingleTv:
+//   yes — 所有组分振动温度合并为单一 Tv
+//   no  — 各组分独立振动温度
+// downgradeToSingleTemperature:
+//   yes — 平动-振动合并为单一 T (热平衡)
+//   no  — 平动-振动解耦 (热非平衡)
+downgradeToSingleTv no;
+downgradeToSingleTemperature yes;
+
+// ---- 化学反应读取器 ----
+// chemistryReader:
+//   foam2ChemistryReader — FOAM 格式反应文件 (推荐)
+//   chemistry2Reader    — 旧格式兼容
+chemistryReader foam2ChemistryReader;
+
+// 反应机理文件 (相对于 $FOAM_CASE)
+foamChemistryFile "$FOAM_CASE/constant/chemDicts/hTCReactionsDPLR";
+
+// 组分热力学数据文件
+foamChemistryThermoFile "$FOAM_CASE/constant/thermoDEM_TRV";
+
+// 双温度模型字典 (振动松弛参数)
+twoTemperatureDictFile "$FOAM_CASE/constant/thermo2TModel";
+
+// ---- 温度限幅 ----
+temperatureBounds
+{
+    Tlow    200;
+    Thigh   40000;
+}
+
+// ************************************************************************* //

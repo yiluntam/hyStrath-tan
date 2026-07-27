@@ -1,0 +1,30 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      wallShearStress;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 壁面剪切应力 — 输出字段 (运行时计算)
+
+dimensions      [1 -1 -2 0 0 0 0];  // kg/(m·s²) = Pa
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    INLET           { type zeroGradient; }
+    WALL            { type zeroGradient; }
+    #include "include/boundaries"
+}
+
+// ************************************************************************* //

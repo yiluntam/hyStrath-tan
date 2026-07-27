@@ -1,0 +1,40 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      boundaries;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// 通用边界定义 — 被 0/ 下各场 #include 引用
+//
+// 注意: 边界 patch 名称必须与网格中的名称完全匹配
+// 如果你用 gmsh/fluent 网格, patch 名称可能不同, 需要相应修改
+
+// -- 对称面 (2D 平面算例) --
+SYM
+{
+    type            symmetry;
+}
+
+// -- 超声速出口 (零梯度外推) --
+OUTLET
+{
+    type            zeroGradient;
+}
+
+// -- 2D 前后平面 (empty = 二维化) --
+frontAndBackPlanes
+{
+    type            empty;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

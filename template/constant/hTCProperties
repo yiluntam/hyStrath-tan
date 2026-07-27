@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      hTCProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ---- 高焓热化学模型 (High-Temperature Chemistry) ----
+// hTC2Model:
+//   noHTC2<rho2ThermoHTC>       — 无 HTC 耦合, 基础热力学 (热平衡)
+//   noHTC2<rho2ChemistryHTC>    — 无 HTC 耦合, 含化学 (热平衡+化学反应)
+//   laminar2<rho2ThermoHTC>     — 层流 HTC, 基础热力学 (热非平衡)
+//   laminar2<rho2ChemistryHTC>  — 层流 HTC, 含化学 (热非平衡+化学反应, 推荐)
+//
+// active:
+//   on  — 开启热非平衡求解 (求解 Tv 方程)
+//   off — 关闭 HTC 模块 (热平衡或冻结流)
+hTC2Model  laminar2<rho2ChemistryHTC>;
+
+active     off;
+
+laminar2Coeffs
+{}
+
+// ---- 混合物输出控制 ----
+mixtureOutputs
+{
+    molarFraction       off;   // 摩尔分数
+    numberDensity       off;   // 数密度
+    partialDensity      off;   // 分密度
+    partialPressure     off;   // 分压
+    degreesOfFreedom    off;   // 自由度
+    vibrationalEnergy   off;   // 振动能
+}
+
+// ************************************************************************* //

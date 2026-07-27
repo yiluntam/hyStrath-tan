@@ -33,6 +33,9 @@ typedef void (*FnPtr)
 std::map<word, FnPtr> fluxMap;
 fluxMap["Kurganov"] = KurganovFlux;
 fluxMap["Tadmor"] = TadmorFlux;
+fluxMap["MUSCL_AUSM"] = AUSMFlux;
+fluxMap["WENOZ_AUSM"] = AUSMFlux;
+fluxMap["WENOZ7_AUSM"] = AUSMFlux;
 
 word fluxScheme("Kurganov");
 FixedList<word, 2> blendedSchemes;
@@ -43,6 +46,9 @@ if (mesh.schemesDict().readIfPresent("fluxScheme", fluxScheme))
     (
         (fluxScheme == "Tadmor")
      or (fluxScheme == "Kurganov")
+     or (fluxScheme == "MUSCL_AUSM")
+     or (fluxScheme == "WENOZ_AUSM")
+     or (fluxScheme == "WENOZ7_AUSM")
     )
     {
         Info<< "fluxScheme: " << fluxScheme << endl;
@@ -74,7 +80,7 @@ if (mesh.schemesDict().readIfPresent("fluxScheme", fluxScheme))
             "readFluxScheme"
         )   << "fluxScheme: " << fluxScheme
             << " is not a valid choice. Options are: Kurganov, Tadmor, "
-            << "and blended"
+            << "MUSCL_AUSM, WENOZ_AUSM, WENOZ7_AUSM, and blended"
             << abort(FatalError);
     }
 }
@@ -183,5 +189,25 @@ else
             )
         );
     }
+}
+
+// --- 结构化网格模板 (MUSCL/WENO 高精度重构用) ---
+// 变量在 if 外部声明, 使其在函数作用域内对后续 include (MUSCL_WENO_Reconstruct.H) 可见
+labelList axisFaces;
+label nAxisFaces = 0;
+labelList cell_plus_x, cell_minus_x;
+labelList cell_plus_y, cell_minus_y;
+labelList cell_plus_z, cell_minus_z;
+bool isStructuredGrid = false;
+
+// 仅当选用 MUSCL/WENO 格式时初始化; KNP/KT 不需要
+if
+(
+    fluxScheme == "MUSCL_AUSM"
+ or fluxScheme == "WENOZ_AUSM"
+ or fluxScheme == "WENOZ7_AUSM"
+)
+{
+    #include "structuredStencilBuild.H"
 }
 

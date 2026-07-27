@@ -5,6 +5,8 @@
 
 // --- Upwind interpolation of primitive fields on faces
 #include "numerics/upwindInterpolation.H"
+// --- MUSCL/WENO high-order face reconstruction (overwrites pos/neg fields)
+#include "numerics/MUSCL_WENO_Reconstruct.H"
 // --- Compute numerical fluxes
 #include "numerics/fluxesCalculation.H"
 

@@ -1,0 +1,43 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      Tv;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "include/initialConditions"
+
+dimensions      [0 0 0 1 0 0 0];
+
+internalField   uniform $Tve;
+
+boundaryField
+{
+    INLET
+    {
+        type            fixedValue;
+        value           uniform $Tve;
+    }
+
+    WALL
+    {
+        // 非平衡振动温度跳跃 BC (Smoluchowski 跳跃条件)
+        type            nonEqSmoluchowskiJumpTvMix;
+        accommodationCoeff 0.1;        // 热适应系数 (0=绝热, 1=完全适应)
+        Twall           uniform $Twall;
+        value           $Twall;
+    }
+
+    #include "include/boundaries"
+}
+
+// ************************************************************************* //
