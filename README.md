@@ -65,6 +65,20 @@ template/                        # [新] 算例模板
 └── system/                      # 求解设置模板
 ```
 
+### Bug 修复: 粘性能量方程的振动-平动交叉泄漏
+
+**问题**: 原始 `eEqnViscous.H` 使用总热导率 `kappa = kappatr + kappave` 扩散总内能 `e = et + ev`,
+然后 `et = e - ev` 提取平动能。此过程产生一个虚假的 `kappatr/Cv * grad(ev)` 热流项,
+导致振动适应系数变化时平动热流出现非物理的 ~19% 差异。
+
+**修复** (`eEqnViscous.H`): 直接对平动能 `et` 求解扩散方程, 使用平动热导率 `kappatr/CvtrMix`,
+求解后通过 `e = et + ev` 重构总内能。振动能扩散完全由 `evEqnViscous` 处理 (`kappave`)。
+
+修复后的算子分裂:
+- `evEqnViscous`:  rho * d(ev)/dt = div(kappave * grad(Tv))
+- `eEqnViscous`:   rho * d(et)/dt = div(kappatr * grad(Ttr))
+- 合计:           rho * d(e)/dt  = div(kappa * grad(T))  ← 物理正确
+
 ### 原有功能完全保留
 
 当 `fluxScheme` 为 `Kurganov` 或 `Tadmor` 时, 所有新代码无操作, 结果与原始 hyStrath 完全一致.
