@@ -1,34 +1,34 @@
 
-// --- Solve energy, VISCOUS
+// --- Solve translational-rotational energy, VISCOUS
 if (!inviscid)
 {
     fvScalarMatrix eEqnViscous
     (
-        fvm::ddt(rho, e) - fvc::ddt(rho, e)
-      - fvm::laplacian(thermo.kappa()/thermo.CvMix(), e)
+        fvm::ddt(rho, et) - fvc::ddt(rho, et)
+      - fvm::laplacian(thermo.kappatr()/thermo.CvtrMix(), et)
       ==
-        fvOptions(rho, e)
+        fvOptions(rho, et)
     );
 
     if (speciesDiffusionName != "noSpeciesDiffusion")
     {
-        eEqnViscous += 
+        eEqnViscous +=
             fvc::div
             (
                 speciesDiffusion().multiSpeciesHeatSource(),
                 "div(diffusiveFluxes)"
             );
     }
-    
+
     eEqnViscous.relax();
 
     fvOptions.constrain(eEqnViscous);
-    
+
     eEqnViscous.solve();
 
-    fvOptions.correct(e);
+    fvOptions.correct(et);
 
-    et.ref() = e() - ev();
+    e.ref() = et() + ev();
 
     if (downgradeSingleT)
     {
