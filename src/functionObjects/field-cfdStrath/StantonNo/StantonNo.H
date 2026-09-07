@@ -28,10 +28,34 @@ Group
     grpFieldFunctionObjects
 
 Description
-    Evaluates and outputs turbulence y+ for turbulence models.
+    Evaluates and outputs the wall Stanton number for wall patches.
 
     The field is stored on the mesh database so that it can be
     retrieved and used for other applications.
+
+    Definition (classical hypersonic form, Fay-Riddell):
+
+        St = q_w / (rho_inf*U_inf*(h_r - h_w))
+
+    where the recovery enthalpy difference is approximated with the
+    trans-rotational heat capacity:
+
+        h_r - h_w = cp_inf*(T_r - T_w)
+        T_r       = T_inf + r*U_inf^2/(2*cp_inf)   (recovery temperature)
+
+    Reference quantities (rho_inf, U_inf, T_inf, cp_inf) are taken from
+    the first face of the inflow patch; the recovery factor r defaults
+    to sqrt(Pr_inf) (laminar boundary layer) with
+    Pr_inf = mu_inf*cp_inf/kappa_tr,inf, or can be prescribed directly.
+
+    The wall temperature T_w is read face-by-face from thermo.T(), so it
+    follows whatever wall thermal condition is applied (isothermal,
+    Smoluchowski jump, ...).
+
+    Note: the field must be re-read from the start-time directory (see
+    execute()); restart the case (startFrom latestTime) so that the
+    wallHeatFlux file contains physical values before meaningful St can
+    be produced.
 
 Usage
     Example of function object specification to calculate the StantonNo:
@@ -46,12 +70,13 @@ Usage
 
     Where the entries comprise:
     \table
-        Property     | Description             | Required    | Default value
-        type         | Type name: StantonNo    | yes         |
-        wallHeatFlux | Name of wallHeatFlux field | no       | wallHeatFlux
-        inflowPatchName | Name of inflow patch | no          | inlet
-        result       | Name of Stanton field   | no          | \<function name\>
-        log          | Log to standard output  | no          | yes
+        Property        | Description                          | Required | Default value
+        type            | Type name: StantonNo                 | yes      |
+        wallHeatFlux    | Name of wallHeatFlux field           | no       | wallHeatFlux
+        inflowPatchName | Name of inflow patch                 | no       | inlet
+        recoveryFactor  | Recovery factor r; < 0 = auto (sqrt(Pr_inf), laminar) | no | -1
+        result          | Name of Stanton field                | no       | \<function name\>
+        log             | Log to standard output               | no       | yes
     \endtable
 
 
@@ -97,6 +122,9 @@ class StantonNo
 
         //- Name of inflow patch
         word inflowPatchName_;
+
+        //- Recovery factor r; < 0 = auto (sqrt(Pr_inf), laminar BL)
+        scalar recoveryFactor_;
 
         //- header of wallHeatFlux field
         IOobject wallHeatFluxHeader_;

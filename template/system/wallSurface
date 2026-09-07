@@ -28,7 +28,8 @@ FoamFile
 //   wallShearStress   壁面剪切力 τ_w    [Pa]   (surfaceQuantities FO 注册)
 //   frictionCoefficient 摩擦系数 Cf     [-]    (surfaceCoefficients FO 注册;
 //                       首算读 0/ 占位值, 详见该文件说明)
-//   StantonNo         Stanton 数 St     [-]    (同上)
+//   StantonNo         Stanton 数 St     [-]    (surfaceCoefficients FO 注册;
+//                       恢复焓定义 St = q_w/(ρ∞·U∞·(h_r−h_w)), 2026-09 修正)
 //   pressureCoefficient 压力系数 Cp     [-]    (surfaceCoefficients FO 注册)
 //   p                 压力              [Pa]
 //   Tt                平动温度          [K]    — 两温模型中转动温度与平动

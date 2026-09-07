@@ -76,6 +76,7 @@ Foam::functionObjects::StantonNo::StantonNo
     writeFile(obr_, name, typeName, dict),
     wallHeatFlux_("wallHeatFlux"),
     inflowPatchName_("inlet"),
+    recoveryFactor_(-1),
     wallHeatFluxHeader_
     (
         wallHeatFlux_,
@@ -142,6 +143,8 @@ bool Foam::functionObjects::StantonNo::read(const dictionary& dict)
 
     inflowPatchName_ = dict.lookupOrDefault<word>("inflowPatchName", "inlet");
 
+    recoveryFactor_ = dict.lookupOrDefault<scalar>("recoveryFactor", -1);
+
     return true;
 }
 
@@ -186,6 +189,32 @@ bool Foam::functionObjects::StantonNo::execute()
             const scalar rhoinf = rhoBf[inflowPatchId][0];
             const scalar magUinf = mag(UBf[inflowPatchId][0]);
 
+            // Freestream recovery quantities (inflow patch, face 0):
+            //   Pr_inf = mu_inf*cp_inf/kappa_tr,inf
+            //   r = recoveryFactor_ if >= 0, else sqrt(Pr_inf) (laminar BL)
+            //   T_r = T_inf + r*U_inf^2/(2*cp_inf)   (recovery temperature)
+            // and St = q_w/(rho_inf*U_inf*cp_inf*(T_r - T_w)) with T_w read
+            // face-by-face from thermo.T()
+            const volScalarField& T = thermo.T();
+
+            tmp<volScalarField> tCp = thermo.Cp_t();
+            const volScalarField::Boundary& cpBf = tCp().boundaryField();
+
+            tmp<volScalarField> tMu = thermo.mu();
+            const volScalarField::Boundary& muBf = tMu().boundaryField();
+
+            const scalar Tinf = T.boundaryField()[inflowPatchId][0];
+            const scalar cpinf = cpBf[inflowPatchId][0];
+            const scalar Prinf =
+                muBf[inflowPatchId][0]*cpinf
+               /(thermo.kappatr().boundaryField()[inflowPatchId][0]);
+
+            const scalar recoveryFactor =
+                recoveryFactor_ >= 0 ? recoveryFactor_ : Foam::sqrt(Prinf);
+
+            const scalar Tr =
+                Tinf + recoveryFactor*magUinf*magUinf/(2*cpinf);
+
             const fvPatchList& patches = mesh_.boundary();
 
             forAll(patches, patchi)
@@ -194,9 +223,24 @@ bool Foam::functionObjects::StantonNo::execute()
 
                 if (isA<wallFvPatch>(patch))
                 {
-                    StantonNoBf[patchi] =
-                        wallHeatFluxBf[patchi]
-                       /(0.5*rhoinf*pow(magUinf, 3));
+                    const fvPatchScalarField& pT = T.boundaryField()[patchi];
+
+                    forAll(pT, facei)
+                    {
+                        const scalar dh = cpinf*(Tr - pT[facei]);
+
+                        if (mag(dh) > SMALL)
+                        {
+                            StantonNoBf[patchi][facei] =
+                                wallHeatFluxBf[patchi][facei]
+                               /(rhoinf*magUinf*dh);
+                        }
+                        else
+                        {
+                            // Adiabatic wall (T_r == T_w): St undefined
+                            StantonNoBf[patchi][facei] = 0.0;
+                        }
+                    }
                 }
             }
         }

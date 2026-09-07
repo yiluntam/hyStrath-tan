@@ -26,18 +26,28 @@ FoamFile
 //   即为此工作流)。或改用后处理: 由 wallSurface 采样的 τ_w/q_w 按
 //   下式换算:
 //     Cf = |τ_w| / (0.5·ρ∞·U∞²)
-//     St = q_w / (0.5·ρ∞·U∞³)          [strath 约定]
+//     St = q_w / (ρ∞·U∞·(h_r − h_w))   [恢复焓定义, 与 FO 修正版一致]
 //   参考量 ρ∞/U∞ 均取 inflowPatchName patch 的第 0 个面值。
 //   pressureCoefficient 无此问题 (由 p 实时计算)。
 // ─────────────────────────────────────────────────────────────────────────
 // FO 生成场本身 AUTO_WRITE, 无需 writeFields 类开关
+//
+// ⚠ 本目录的 StantonNo FO 已改为恢复焓定义 (StantonNo.C 2026-09 修正):
+//   St = q_w/(ρ∞·U∞·(h_r − h_w)), h_r − h_w = cp∞·(T_r − T_w),
+//   T_r = T∞ + r·U∞²/(2·cp∞), r 默认 √Pr∞ (层流, 由 mu/cp/kappatr 自由流
+//   面值算出), 也可用 recoveryFactor 手动指定; T_w 逐面取自 thermo.T()。
+//   旧版 (0.5·ρ∞·U∞³ 分母) 的编译产物仍留在集群/WSL 上, 重编
+//   libstrathFieldFunctionObjects 后本定义才生效。
 
-// Stanton 数: St = q_w/(0.5·ρ∞·U∞³), q_w 取 wallHeatFlux (总热流)
+// Stanton 数 (恢复焓定义): St = q_w/(ρ∞·U∞·(h_r − h_w))
+// q_w 取 wallHeatFlux (总热流); 需平动/振动分量 St 时复制本条目并把
+// wallHeatFlux 改为 wallHeatFlux_tr / wallHeatFlux_ve
 StantonNumber
 {
     type            StantonNo;
     wallHeatFlux    wallHeatFlux;    // 源热流场名 (可改 wallHeatFlux_tr/ve)
-    inflowPatchName INLET;           // ρ∞/U∞ 参考 patch
+    inflowPatchName INLET;           // ρ∞/U∞/T∞/cp∞ 参考 patch
+    recoveryFactor  -1;              // <0 = 自动 √Pr∞ (层流); 手动给值则覆盖
     libs            ("libstrathFieldFunctionObjects.so");
     writeControl    outputTime;
     log             no;
