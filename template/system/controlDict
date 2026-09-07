@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -15,71 +15,120 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// =====================================================================
+// hy2Foam controlDict 模板 (详细注释版)
+// 本文件关键字分三组: ① OpenFOAM 通用时间/输出控制 ② hy2Foam 读取的
+// 求解控制参数 (readTimeControls.H / LTS/readLTSTimeControls.H)
+// ③ 库加载与函数对象
+// =====================================================================
+
 // ---- 求解器与时间控制 ----
 application     hy2Foam;
 
 // startFrom (起始方式):
-//   firstTime — 从最早的 time 目录开始
-//   startTime — 从指定 startTime 开始
-//   latestTime — 从最新的 time 目录续算
+//   firstTime  — 从最早的 time 目录开始
+//   startTime  — 从指定 startTime 开始
+//   latestTime — 从最新的 time 目录续算 (断点续算用这个)
 startFrom       startTime;
 startTime       0;
 
 // stopAt (终止条件):
-//   endTime    — 达到 endTime 时停止
+//   endTime    — 达到 endTime 时停止 (常规)
 //   writeNow   — 完成当前写操作后停止
 //   noWriteNow — 立即停止 (不写当前步)
 //   nextWrite  — 下一次写操作时停止
 stopAt          endTime;
 endTime         1.0e-5;           // 终止时间 (s)
 
-deltaT          1.0e-10;          // 初始时间步长 (s)
+// deltaT: 初始物理时间步长 (s)。
+// adjustTimeStep yes 时它只是起步值, 每步按 Co 数自动缩放
+// (每步增幅上限 1.2 倍, 降低即时生效, 见 setDeltaT.H);
+// adjustTimeStep no 时固定不变 (需自行保证 Co < maxCo)
+deltaT          1.0e-10;
 
 // ---- 输出控制 ----
 // writeControl:
 //   timeStep         — 每 N 步输出一次
 //   runTime          — 每 N 秒物理时间输出一次
-//   adjustableRunTime — 按物理时间输出 (自动调整以匹配时间步边界)
+//   adjustableRunTime— 按物理时间输出 (自动对齐到步边界, 推荐)
 //   cpuTime          — 每 N 秒 CPU 时间输出一次
 //   clockTime        — 每 N 秒挂钟时间输出一次
+// 注: LTS (localEuler) 模式下 "物理时间" 退化为迭代计数,
+//     建议改用 timeStep 输出并按步数解释
 writeControl    adjustableRunTime;
-writeInterval   1.0e-4;            // 输出间隔 (s)
+writeInterval   1.0e-4;            // 输出间隔 (随 writeControl 单位变化)
 purgeWrite      10;                // 最多保留的输出目录数 (0 = 全部保留)
 
 // writeFormat:
-//   ascii  — 文本格式 (人类可读)
-//   binary — 二进制格式 (更快, 更省空间)
+//   ascii  — 文本格式 (人类可读, 后处理脚本友好)
+//   binary — 二进制 (更快更省空间, 集群大算例推荐)
 writeFormat     ascii;
-writePrecision  6;
+writePrecision  6;                 // ascii 有效位数
 writeCompression off;
 
-// timeFormat:
-//   fixed       — 固定小数位数
-//   scientific  — 科学计数法
-//   general     — 自动选择 (推荐)
+// timeFormat / timePrecision: 时间目录名的书写格式
+//   fixed | scientific | general (推荐 general)
 timeFormat      general;
 timePrecision   10;
+
+// runTimeModifiable yes: 运行中修改本文件即时生效 (调 endTime/写间隔用)
 runTimeModifiable true;
+
+// =====================================================================
+// ② hy2Foam 求解控制 (与 fvSchemes 的 fluxScheme/convSchemes 配合)
+// =====================================================================
 
 // ---- 自适应时间步 ----
 adjustTimeStep  yes;
-// maxCo: 最大 Courant 数
-//   Kurganov/Tadmor: 通常 0.2-0.5
-//   MUSCL_AUSM/WENOZ_AUSM: 可用 0.5-0.8
-maxCo           0.2;
-maxDeltaT       1.0e-5;           // 最大允许时间步 (s)
 
-// ---- 加载 strath 有限体积库 (提供非标准 BC) ----
+// maxCo: 最大 Courant 数 (readTimeControls.H, 默认 1.0)。
+// 显式密度基 + 高阶重构的经验范围:
+//   Kurganov/Tadmor (1 阶面值):        0.2-0.5
+//   AUSM/Roe + MUSCL (TVD 限制):       0.2-0.4
+//   AUSM/Roe + WENOZ5/7 (无限制器):    0.1-0.3 (更保守)
+// 两温松弛与化学反应刚性更强时取下限
+maxCo           0.2;
+maxDeltaT       1.0e-5;           // 时间步上限 (s), 同时是 LTS 的 Δt 上限
+
+// ---- LTS 局部时间步进 (仅 fvSchemes: ddtSchemes default = localEuler 时生效) ----
+// 已知现状 (2026-09 审查):
+//   rDeltaTSmoothingCoeff — 死参数: readLTSTimeControls.H 读取,
+//     但 setrDeltaT.H 激活代码硬编码 0.1, 设什么都是 0.1;
+//   rDeltaTDampingCoeff   — 读取后从未使用 (时步增长率阻尼被禁用);
+//   alphaTemp             — 读取后从未使用 (化学反应/温度时标限制
+//     在 setrDeltaT.H 中整段被注释, 作者标注 UNSTABLE)。
+// => 反应流算例勿依赖 LTS 的化学刚性保护; 以下三行仅为占位说明
+//rDeltaTSmoothingCoeff  0.1;
+//rDeltaTDampingCoeff    1.0;
+//alphaTemp              0.05;
+
+// =====================================================================
+// ③ 库加载与函数对象
+// =====================================================================
+
+// ---- 加载 strath 有限体积库 (提供 nonCatalytic / rampInlet 等非标准 BC) ----
+// hy2Foam 自带的滑移/跳跃 BC (nonEqMaxwellSlipU, nonEqSmoluchowskiJump*)
+// 编译进 libhyTwoFoam, 由求解器自动链接, 无需在此列出
 libs ("libstrathFiniteVolume.so");
 
 // ---- 运行时函数对象 ----
+// 壁面量输出 (执行顺序 = 声明顺序, 不可颠倒):
+//   1. surfaceQuantities   — τ_w 实时计算并注册 (其他 FO 依赖它)
+//   2. surfaceCoefficients — Cf / St / Cp 无量纲系数场
+//   3. wallSurface         — 壁面逐面采样输出全部量到 postProcessing/
+//                            surfaceSampling/<时刻>/<场名>_WALL.raw
+// 壁面热流 q_w 总/平动/振动分量由求解器内置计算 (createThermoFields.H),
+// 其写盘开关在 transportProperties 的 transportModels.writeWallHeatFlux。
+// Cf/St 首算数值不可信 (读 0/ 占位), 见 surfaceCoefficients 文件头说明。
+// 其他可用 FO 示例见 tutorials: forces (气动力), sets (线采样) 等
 functions
 {
+    #include "surfaceQuantities"
+    #include "surfaceCoefficients"
+    #include "wallSurface"
+
     // 示例: 输出气动力
     // #include "forces"
-
-    // 示例: 输出表面量 (热流、剪切应力等)
-    // #include "surfaceQuantities"
 }
 
 // ************************************************************************* //

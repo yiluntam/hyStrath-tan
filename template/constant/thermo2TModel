@@ -1,0 +1,104 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1706                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermo2TModel;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+thermalRelaxationModels
+{
+    VT
+    {
+        relaxationType        LandauTellerVT;
+        model                 LeMANSMWP;
+        fullCoeffsForm        on;
+        overwriteDefault      on;
+        speciesDependent      on;
+        collidingPair         on;
+    }
+
+    VV
+    {
+        relaxationType        noVVEnergyTransfer;
+        model                 Knab;
+        overwriteDefault      on;
+        speciesDependent      on;
+        collidingPair         on;
+    }
+
+    he
+    {
+        relaxationType        noHEEnergyTransfer;
+    }
+
+    eV
+    {
+        relaxationType        noeVEnergyTransfer;
+        model                 BourdonVervisch;
+        overwriteDefault      off;
+        speciesDependent      off;
+    }
+}
+
+
+// V-T Models — N2 only
+//---------------------
+
+MillikanWhiteCoefficients
+{
+    allSpecies
+    {
+        preAij   1.16e-3;
+        preMij   0.015;
+        Aij      221.53;
+        Bij      0.029;
+        offset   18.42;
+    }
+
+    N2
+    {
+        preAij   1.16e-3;
+        preMij   0.015;
+        Aij      221.53;
+        Bij      0.029;
+        offset   18.42;
+    }
+}
+
+
+ParkCoefficients
+{
+    allSpecies
+    {
+        preAij   1.16e-3;
+        preMij   0.015;
+        Aij      221.53;
+        Bij      0.029;
+        offset   18.42;
+        sigma1   1.0e-21;
+        sigma2   5.0e4;
+    }
+
+    N2
+    {
+        preAij   1.16e-3;
+        preMij   0.015;
+        Aij      221.53;
+        Bij      0.029;
+        offset   18.42;
+        sigma1   3.0e-21;
+        sigma2   5.0e4;
+    }
+}
+
+// ************************************************************************* //

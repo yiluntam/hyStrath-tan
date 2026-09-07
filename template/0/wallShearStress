@@ -14,7 +14,11 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// 壁面剪切应力 — 输出字段 (运行时计算)
+// 壁面剪切应力 τ_wall — 占位场 (0 值), 运行值由 strath 的
+// wallShearStress FO (system/surfaceQuantities) 实时计算
+// 注意: 本文件不可删除 — frictionCoefficient FO 构造时对启动时刻
+// 目录做 MUST_READ 头检查 (frictionCoefficient.C), 缺文件即 FatalError;
+// 且其 execute 每次都从启动时刻重读本文件 (见 surfaceCoefficients 说明)
 
 dimensions      [1 -1 -2 0 0 0 0];  // kg/(m·s²) = Pa
 

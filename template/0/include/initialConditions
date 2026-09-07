@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -16,6 +16,25 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // 初始条件和边界值模板 — 所有 0/ 场的变量集中定义在此
 // 修改此文件即可同时更新所有场的初值
+//
+// ---- 自洽性核对 (改值前必读) ----
+// ρ 与 p、T 必须满足完全气体状态方程 ρ = p/(R·T) (perfect2Gas):
+//   R_N2 = R_u/M_N2 = 8314.47/28.0134 ≈ 296.80 J/(kg·K)
+//   ρ = 1.63/(296.80×100) = 5.4933e-5 kg/m³  ← 与 rhoInlet 一致
+// 若改动 pressureInlet 或 Ttr, 请同步换算 rhoInlet, 否则初始化即非物理
+// (rhoEqn 显式推进对初始状态方程偏差会以声波形式振荡发散)。
+//
+// ---- 冻结声速与马赫数 (当前 N2 配置) ----
+// 冻结比热比 γ = c_p/c_v: N2 在低温下振动冻结, γ ≈ 1.4 (双原子)
+// 冻结声速 c = √(γ·R·Ttr) = √(1.4×296.80×100) ≈ 203.8 m/s
+// 入口马赫数 M∞ = velocityInlet/c = 2446.1/203.8 ≈ 12.0 (高超声速)
+// 注意: AUSM 格式还需要 controlDict/transportProperties 无关的
+// Mach_inf 输入 (system/fvSchemes), 取值应与这里的 M∞ 一致。
+//
+// ---- 出现的各温度语义 ----
+// Ttr: 平动-转动温度 (eEqnViscous 求解 et 后由状态方程反解)
+// Tve: 振动温度 (Tv 场初值; 两温模式 downgradeToSingleTv no 时为统一 Tv)
+// Twall: 壁面温度 (被 Tt 等温壁、非Eq Smoluchowski 跳跃 BC 的 Twall 共用)
 
 // -- 自由流温度 --
 Ttr       100;            // 平动温度 [K]
@@ -29,9 +48,9 @@ pressureField  $pressureInlet;
 rhoInlet       5.493e-5;  // 入口密度 [kg/m³] (需与 P, T 自洽: ρ = P/(R·T))
 
 // -- 速度 --
-velocityInlet  2446.1;    // 入口速度 x 分量 [m/s]
+velocityInlet  2446.1;    // 入口速度 x 分量 [m/s] (当前 M∞ ≈ 12)
 velocityField  ($velocityInlet 0 0);
-velocityWall   (0 0 0);   // 壁面无滑移
+velocityWall   (0 0 0);   // 壁面无滑移 (滑移壁改用 nonEqMaxwellSlipU, 见 U)
 
 // -- 组分质量分数 (总和 = 1.0) --
 Y_N2      1.0;            // N2 质量分数 (单组分 = 1.0)

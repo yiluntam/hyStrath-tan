@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -13,6 +13,15 @@ FoamFile
     object      Tv;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 振动温度场 — 导出量 (由 rhoEv/hevk 方程解反解)
+// 模式语义 (与 constant/thermophysicalProperties 对应):
+//   downgradeToSingleTv no  (逐分子 Tv): 本场为统一输出的混合 Tv;
+//     逐物种 Tv 由 pD/hevk 每物种场导出, 边界同样需逐物种设置
+//   downgradeToSingleTv yes (单 Tv): 本场即求解的振动温度
+//   downgradeToSingleTemperature yes (热平衡): Tv 不参与求解,
+//     本场仅为占位 (设为与 Ttr 相同即可), 相应 BC 不会被执行
+// 振动松弛: Millikan-White + Park 修正, 参数在 constant/thermo2TModel
 
 #include "include/initialConditions"
 
@@ -28,9 +37,11 @@ boundaryField
         value           uniform $Tve;
     }
 
+    // 非平衡振动温度跳跃 BC (Smoluchowski 跳跃条件, 求解器自带)
+    // 逐分子 Tv 模式可改用 nonEqSmoluchowskiJumpTv (按物种 alphave)
+    // accommodationCoeff 必填且 0<α≤1, 否则启动即 FatalError
     WALL
     {
-        // 非平衡振动温度跳跃 BC (Smoluchowski 跳跃条件)
         type            nonEqSmoluchowskiJumpTvMix;
         accommodationCoeff 0.1;        // 热适应系数 (0=绝热, 1=完全适应)
         Twall           uniform $Twall;
@@ -40,4 +51,4 @@ boundaryField
     #include "include/boundaries"
 }
 
-// ************************************************************************* //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

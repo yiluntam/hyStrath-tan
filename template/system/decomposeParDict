@@ -9,26 +9,36 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    object      wallHeatFlux;
+    class       dictionary;
+    object      decomposeParDict;
 }
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// 壁面热流 q_wall — 占位输出场 (0 值): 运行时由 hy2Foam 重算并写入, 无需修改
-// 写盘开关: transportProperties 的 transportModels.writeWallHeatFlux
-// 两温模式下同时输出平动/振动分量 wallHeatFlux_tr / wallHeatFlux_ve
-// 注意: 本文件不可删除 — StantonNo FO 构造时对启动时刻目录做
-// MUST_READ 头检查 (StantonNo.C), 缺文件即 FatalError
+numberOfSubdomains 4;
 
-dimensions      [1 0 -3 0 0 0 0];  // kg/s³ = W/m²
+method          scotch;
 
-internalField   uniform 0;
-
-boundaryField
+simpleCoeffs
 {
-    INLET           { type zeroGradient; }
-    WALL            { type zeroGradient; }
-    #include "include/boundaries"
+    n           (2 2 1);        // 2D: streamwise × wall-normal
+    delta       0.001;
 }
+
+hierarchicalCoeffs
+{
+    n           (4 1 1);         // split only in streamwise direction
+    delta       0.001;
+    order       xyz;
+}
+
+manualCoeffs
+{
+    dataFile        "";
+}
+
+distributed     no;
+
+roots           ( );
 
 // ************************************************************************* //

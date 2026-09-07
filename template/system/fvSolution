@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -15,33 +15,52 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// =====================================================================
+// hy2Foam fvSolution 模板 (详细注释版)
+//
+// hy2Foam 实际读取的求解器条目 (经源码核对, 2026-09):
+//   "rho"            — 连续性 (显式, eqns/rhoEqn.H)
+//   "rhoU"           — 无粘动量 (显式, eqns/UEqn.H)
+//   "U"              — 粘性动量 (半隐式, eqns/UEqn.H, solve 后重构 rhoU)
+//   "e"              — 总内能 (downgradeToSingleTemperature yes, eEqnViscous)
+//   "et"             — 平动内能 (两温模式, eEqnViscous)
+//   "ev"             — 振动内能 (downgradeToSingleTv yes, evEqnViscous_SingleTv)
+//   "rhoEv"          — 振动能守恒变量 (SingleTv, evEqnInviscid_SingleTv.H)
+//   "rhoEv_<species>"— 逐物种振动能守恒变量 (逐分子 Tv, evEqnInviscid.H)
+//   "hevk_<species>" — 逐物种振动能扩散方程 (evEqnViscous.H)
+//   "Yi"             — 组分质量分数 (eqns/YEqn.H, 显式指定 mesh.solver("Yi"))
+//   "k"/"omega"/"epsilon" — RANS 湍流变量
+//   "rhoE"           — 总能量守恒变量 (显式)
+// 正则式条目按名称匹配; 缺条目且无兜底时运行报错
+// =====================================================================
+
 // ---- 线性求解器设置 ----
 // solver 可用类型:
-//   diagonal     — 对角求解器 (显式变量, rho/rhoU/rhoE/rhoEv)
+//   diagonal     — 对角求解器 (纯显式方程专用, 一步完成)
 //   smoothSolver — 光滑求解器 (需指定 smoother)
-//   PBiCG        — 预条件双共轭梯度 (需指定 preconditioner)
-//   PCG          — 预条件共轭梯度
-//   GAMG         — 几何代数多重网格
+//   PBiCG        — 预条件双共轭梯度 (不对称矩阵, 组分/输运常用)
+//   PCG          — 预条件共轭梯度 (对称矩阵)
+//   GAMG         — 几何代数多重网格 (大网格压力类, hy2Foam 少用)
 //
 // smoother 可用类型 (配合 smoothSolver):
-//   GaussSeidel  — Gauss-Seidel 迭代
-//   DILU         — 对角不完全 LU
-//   DIC          — 对角不完全 Cholesky
+//   GaussSeidel | DILU | DIC | symmetricGaussSeidel
 //
 // preconditioner 可用类型 (配合 PBiCG/PCG):
-//   DILU  — 对角不完全 LU (推荐用于 Yi)
-//   DIC   — 对角不完全 Cholesky
-//   GAMG  — 几何代数多重网格
-
+//   DILU (不对称推荐) | DIC | none
+//
+// tolerance  — 绝对残差;  relTol — 相对残差 (相对初始残差)
+// minIter/maxIter — 最小/最大迭代数;  nSweeps — smoothSolver 每步扫略数
 solvers
 {
-    // 守恒变量 (rho, rhoU, rhoE, rhoEv*) — 显式处理, 无需迭代
+    // 守恒变量 (rho, rhoU, rhoE, rhoEv*) — 显式处理, 必须用 diagonal:
+    // 这些方程形如 fvm::ddt(变量) + fvc::div(通量), 矩阵只有时间对角块,
+    // 一步求逆即等于前向 Euler 推进
     "(rho|rhoU|rhoE|rhoEv.*)"
     {
         solver          diagonal;
     }
 
-    // 速度
+    // 速度 (粘性动量, 半隐式: 时间对角 + 隐式 laplacian(muEff,U))
     U
     {
         solver          smoothSolver;
@@ -51,7 +70,9 @@ solvers
         relTol          0.0001;
     }
 
-    // 能量 (h, e 及其衍生)
+    // 能量族: 覆盖 e (单温), et (两温平动), ev (单 Tv 振动) 及 h 系
+    // 注意: 不覆盖 hevk_<species> — 逐分子 Tv 模式需另加条目
+    // "(hevk|rhoEv_hevk).*" (拷贝 $U 块并适当收紧 tolerance)
     "(h|e).*"
     {
         $U;
@@ -61,7 +82,7 @@ solvers
         maxIter         400;
     }
 
-    // 组分质量分数
+    // 组分质量分数 (隐式对流 convectionScheme + 隐式反应源 reaction->R)
     Yi
     {
         solver          PBiCG;
@@ -71,7 +92,7 @@ solvers
         maxIter         10;
     }
 
-    // 湍流变量 (选用 RANS 时需要)
+    // 湍流变量 (选用 RANS 时需要; 对应 0/k 0/omega 等场)
     "(k|omega|epsilon)"
     {
         $U;
@@ -82,18 +103,19 @@ solvers
     }
 }
 
-// ---- 松弛因子 (可选) ----
+// ---- 松弛因子 ----
+// 注意: eqns/UEqn.H 对粘性动量矩阵调用了 UEqn.relax() —
+// 该调用按下面的 relaxationFactors 查找; 未给出条目时不松弛 (显式骨架
+// 本就如此, 稳态计算可借此欠松弛加速收敛)
 // relaxationFactors
 // {
-//     fields
-//     {
-//         p       0.3;
-//         U       0.7;
-//     }
 //     equations
 //     {
-//         "(k|omega|epsilon)"   0.7;
+//         U       0.7;    // 稳态/伪定常计算建议 < 1
+//         "(h|e).*"  0.7;
 //     }
 // }
 
+// ---- PIMPLE/PISO 子循环 ----
+// hy2Foam 为密度基分步推进, 无 PISO 循环, 本字典不需要 PIMPLE 条目
 // ************************************************************************* //

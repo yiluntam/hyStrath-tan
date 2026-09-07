@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -14,6 +14,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// 速度场 — 求解链: rhoU (无粘动量, 显式 diagonal) → U (粘性动量,
+// 半隐式, fvSolution 的 "U" 条目) → 重建 rhoU (见 eqns/UEqn.H)
+
 #include "include/initialConditions"
 
 dimensions      [0 1 -1 0 0 0 0];
@@ -23,13 +26,23 @@ internalField   uniform $velocityField;
 boundaryField
 {
     // -- 超声速入口 (所有变量固定) --
+    // 亚声速入口不可全固定 (压力信息需允许传入), 应改用
+    // totalPressure/freestream 类 BC 或固定 rho/p/U 中的子集
     INLET
     {
         type            fixedValue;
         value           uniform ($velocityInlet 0 0);
     }
 
-    // -- 壁面 (无滑移) --
+    // -- 壁面选项 (二选一) --
+    //   fixedValue (0 0 0)            — 无滑移 (当前, 连续介质)
+    //   nonEqMaxwellSlipU             — 一阶 Maxwell 速度滑移 (稀薄)
+    //     type            nonEqMaxwellSlipU;
+    //     accommodationCoeff 0.9;       // 必填
+    //     Uwall           uniform (0 0 0); // 壁面运动速度, 默认零
+    //     thermalCreep    true;         // 热蠕变项, 默认 true
+    //     curvature       true;         // 曲率修正, 默认 true
+    //   (Tt/rho/mu/tauMC/mfp 场名可省略, 默认同名自动查找)
     WALL
     {
         type            fixedValue;
@@ -39,4 +52,4 @@ boundaryField
     #include "include/boundaries"
 }
 
-// ************************************************************************* //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -13,6 +13,13 @@ FoamFile
     object      Tt;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 平动-转动温度场 — 导出量:
+// 两温模式 (downgradeToSingleTemperature no): Tt 由 et = e - ev 经
+//   Newton 迭代反解 (thermo2TModel 提供 cp/cv/e(Tt) 关系)
+// 热平衡模式 (downgradeToSingleTemperature yes): Tt 即单一温度 T,
+//   本场与其一致, 仍需提供 (读取时按 phaseProperty 名查找)
+// 求解变量链: rhoE/rhoEv → e/ev → Tt/Tv → p (见 pEqn.H)
 
 #include "include/initialConditions"
 
@@ -28,6 +35,14 @@ boundaryField
         value           uniform $Ttr;
     }
 
+    // 壁面选项 (三选一):
+    //   fixedValue                    — 等温壁 (当前, 最简单, 连续介质)
+    //   nonEqSmoluchowskiJumpT        — 平动温度跳跃 (稀薄, 求解器自带 BC)
+    //     type            nonEqSmoluchowskiJumpT;
+    //     accommodationCoeff 0.9;       // 必填, 0<α≤1
+    //     Twall           uniform $Twall;
+    //     value           $Twall;
+    //   adiabatic                     — 绝热壁 (∂T/∂n = 0)
     WALL
     {
         type            fixedValue;
@@ -37,4 +52,4 @@ boundaryField
     #include "include/boundaries"
 }
 
-// ************************************************************************* //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

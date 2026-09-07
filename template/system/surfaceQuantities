@@ -1,0 +1,32 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      surfaceQuantities;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 壁面剪切应力 FO (strath 库, 源码 src/functionObjects/field-cfdStrath/
+// wallShearStress/) — 每个输出时刻由湍流模型 devRhoReff 实时计算
+// τ_w = (-μ_eff·(∂u/∂n))|w 并写入:
+//   postProcessing/surfaceQuantities/<时间>/wallShearStress.dat
+//   <时间>/wallShearStress 场文件 (供重启续算与 surfaceCoefficients 使用)
+// 求得的场同时注册到 objectRegistry, 可被 wallSurface 采样输出
+wallShearStress
+{
+    type            wallShearStress;
+    libs            ("libstrathFieldFunctionObjects.so");
+    patches         (WALL);          // 计算 τ_w 的壁面 patch 列表
+    writeControl    outputTime;
+    log             no;
+}
+
+// ************************************************************************* //

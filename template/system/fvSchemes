@@ -15,18 +15,51 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// ---- 通量格式 ----
-// 可选: Kurganov, Tadmor, MUSCL_AUSM, WENOZ_AUSM, WENOZ7_AUSM
-//   Kurganov/Tadmor:   2 阶中心格式 (Riemann-free), 配合 vanLeer 限制器
-//   MUSCL_AUSM:        3 阶 MUSCL (κ=1/3, van Albada 限制器) + AUSM+-up 通量
-//   WENOZ_AUSM:        5 阶 WENO-Z (Borges 2008) + AUSM+-up 通量
-//   WENOZ7_AUSM:       7 阶 WENO-Z + AUSM+-up 通量
-// 注: AUSM 系列仅适用于结构化网格 (blockMesh 六面体),
-//     非轴对齐面自动回退为 1 阶 upwind
+// ---- 通量格式 fluxScheme ----
+// 可选: Kurganov (原生 KNP, 默认), AUSM, Roe (另保留 Tadmor)
+//   Kurganov: 原生 KNP 中心格式 (Riemann-free), 不受 convSchemes 等
+//            新选项影响, 结果与原 hyStrath 一致
+//   AUSM:     AUSM+-up 通量, 面值重构由 convSchemes 指定
+//   Roe:      Roe 通量差分分裂, 面值重构由 convSchemes 指定,
+//            熵修正系数由 EntropyCoeff 指定
 fluxScheme            Kurganov;
+
+// ---- 对流重构格式 convSchemes (仅 fluxScheme = AUSM/Roe 时生效) ----
+// 可选: MUSCL, WENOZ5, WENOZ7 (默认 MUSCL)
+//   MUSCL:   3 阶 MUSCL 重构 (κ/限制器可调), TVD 限制器使光滑区渐近 2 阶
+//   WENOZ5:  5 阶 WENO-Z (Borges 2008)
+//   WENOZ7:  7 阶 WENO-Z
+// 注: AUSM/Roe 系列仅适用于结构化网格 (blockMesh 六面体),
+//     存在非轴对齐内部面时启动即报错退出 (structuredStencilBuild
+//     要求 100% 轴对齐, 不再静默降阶); 非结构网格请用 Kurganov
+convSchemes          MUSCL;
+
+// ---- AUSM+up 远场马赫数 Mach_inf (仅 fluxScheme = AUSM 时必需) ----
+// 低马赫修正参数 fa/Mref 需要, 须为正实数 (取算例来流马赫数);
+// 其余格式指定了会被忽略并提示。缺省时 AUSM 启动即报错。
+//Mach_inf            8.0;
+
+// ---- MUSCL 重构选项 (仅 convSchemes = MUSCL 时生效) ----
+// 限制器可选: minmod, vanLeer, superbee, vanAlbada (默认 vanAlbada)
+MUSCLLimiter         vanAlbada;
+// kappa 系数: 1/3 (默认, 3 阶); 0 或 ±1 (2 阶); -1 为迎风型
+MUSCLKappa           0.333333;
+
+// ---- Roe 熵修正 (Harten-Hyman 1983 逐波, 仅 fluxScheme = Roe 时生效) ----
+// eps_k = EntropyCoeff*4*max(0, max(lambda_k_hat - lambda_k_L, lambda_k_R - lambda_k_hat))
+// |lambda| < eps 时: (lambda^2 + eps^2)/(2 eps); 默认 1.0 = SU2 NEMO 原样
+// (含其固有的 4 倍安全因子, 保证膨胀扇内修正必然激活);
+// 波不跨越 (压缩波/接触间断) 时 eps = 0, 修正自动关闭。
+// EntropyCoeff = 0.25 可去掉 4 倍因子, 回到教科书 Harten-Hyman 带宽
+EntropyCoeff         1.0;
 
 // ---- 时间离散 ----
 // 可选: Euler, localEuler, CrankNicolson 1, backward
+// localEuler 激活 LTS 局部时间步进 (伪时间定常收敛):
+//   局部 Δt = 1/max(rDeltaT), rDeltaT 由 maxCo/maxDeltaT (controlDict) 控制;
+//   已知现状 (2026-09 审查): controlDict 的 rDeltaTSmoothingCoeff 为死参数
+//   (代码固定 0.1), rDeltaTDampingCoeff/alphaTemp 未使用 (化学反应时标
+//   限制在 setrDeltaT.H 中被禁用) — 反应流算例勿依赖 LTS 化学保护
 ddtSchemes
 {
     default           Euler;
@@ -80,7 +113,7 @@ laplacianSchemes
 //     vanLeer — van Leer TVD 限制器
 //     vanLeerV — van Leer 矢量限制器 (用于速度)
 //
-// 注: 使用 MUSCL_AUSM / WENOZ_AUSM / WENOZ7_AUSM 时,
+// 注: 使用 fluxScheme AUSM/Roe (convSchemes 重构) 时,
 //     内部面值由 MUSCL_WENO_Reconstruct.H 覆写,
 //     reconstruct 设置仅影响:
 //       (1) 非轴对齐面的内部面 (dirTag==0, 保留 upwind 结果)

@@ -37,6 +37,9 @@ rarefiedParameters
 }
 
 // ---- 输运模型 ----
+// 注意: 黏度/热导率的物理模型实际由 constant/thermophysicalProperties
+// 的 thermoType.transport 选择 (constant/sutherland/blottnerEucken/...),
+// 本字典只控制混合规则、多组分扩散与稀薄参数输出。
 transportModels
 {
     viscosityAndThermalConductivityModels   "see thermophysicalProperties";

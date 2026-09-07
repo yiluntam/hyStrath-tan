@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -14,6 +14,15 @@ FoamFile
     object      N2;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 组分质量分数场 (0 ≤ Y_i ≤ 1, ∑Y_i = 1)
+// 求解: eqns/YEqn.H — 隐式对流 (convectionScheme, 网格求解器名 "Yi")
+//       + 隐式反应源 (reaction->R); 化学关闭 (chemistry off) 时纯对流
+// 方程组名: system/fvSolution solvers 中的 "Yi" 条目
+// 多组分时: 每个物种一个文件 (N2, O2, NO, ...), 最后一个物种由
+// 1 - ∑Y_i 归一, 不需要单独的场文件
+// 注: 组分对流格式的阶数由 fvSchemes div(phi,Yi) 决定, 与通量格式的
+// MUSCL/WENOZ 重建无关 (见 README 已知限制)
 
 #include "include/initialConditions"
 
@@ -29,6 +38,18 @@ boundaryField
         value           uniform $Y_N2;
     }
 
+    // 壁面: 零梯度 = 非催化近似 (无表面复合通量)
+    // 精确做法: type nonCatalytic; (strathFiniteVolume 库,
+    // 需 controlDict libs 加载 "libstrathFiniteVolume.so")
+    //
+    // 催化壁面 (libhyTwoFoam, 2026-09, 详见 README "催化壁面边界条件"):
+    //   原子 (如 N):   type nonEqScottCatalyticY;
+    //                  catalyticEfficiency 0.1;   // γ, 0 ≤ γ ≤ 1
+    //                  molarMass 14.0067;         // [kg/kmol]
+    //   产物 (如 N2):  type nonEqScottCatalyticProductY; atomField N;
+    //   超催化壁:      type nonEqSuperCatalyticY; value uniform 1; (按组分给定)
+    // 壁温同源: 缺省从 Tt 的 nonEqSmoluchowskiJumpT / fixedValue 取, 或本
+    // 字典 Twall 覆盖
     WALL
     {
         type            zeroGradient;  // 无催化壁 (non-catalytic)

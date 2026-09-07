@@ -1,0 +1,80 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      wallSurface;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 壁面采样 FO (标准 surfaces, libsampling) — 把下列场逐面写到
+// postProcessing/surfaceSampling/<时刻>/<场名>_WALL.raw
+// (raw 格式: 头两行 # 注释 + 逐面 x y z 值)
+//
+// 需在 controlDict functions 中排在 surfaceQuantities/surfaceCoefficients
+// 之后 (采样按 objectRegistry 查找场, 源 FO 需先执行注册)
+//
+// ── 壁面量清单与来源 ──────────────────────────────────────────────────
+//   wallHeatFlux      总热流 q_w        [W/m²] (hy2Foam 内置, AUTO_WRITE)
+//   wallHeatFlux_tr   平动热流          [W/m²] (同上; 两温模式输出)
+//   wallHeatFlux_ve   振动热流          [W/m²] (同上)
+//   wallShearStress   壁面剪切力 τ_w    [Pa]   (surfaceQuantities FO 注册)
+//   frictionCoefficient 摩擦系数 Cf     [-]    (surfaceCoefficients FO 注册;
+//                       首算读 0/ 占位值, 详见该文件说明)
+//   StantonNo         Stanton 数 St     [-]    (同上)
+//   pressureCoefficient 压力系数 Cp     [-]    (surfaceCoefficients FO 注册)
+//   p                 压力              [Pa]
+//   Tt                平动温度          [K]    — 两温模型中转动温度与平动
+//                       温度平衡 (Tr ≡ Tt, hyStrath 不解算独立 Tr 场)
+//   Tv                振动温度          [K]
+//   U                 速度              [m/s]
+//   kappatr/kappave   平动/振动热导率   [W/(m·K)]
+// ──────────────────────────────────────────────────────────────────────
+// 注: q_w 三分量写入时间目录由 transportProperties 的
+// transportModels.writeWallHeatFlux 控制; 但注册场始终存在, 采样不受影响
+
+surfaceSampling
+{
+    type            surfaces;
+    libs            ("libsampling.so");
+    writeControl    writeTime;       // 每个写盘时刻采样一次
+    surfaceFormat   raw;
+
+    interpolationScheme cellPoint;
+
+    fields
+    (
+        wallHeatFlux
+        wallHeatFlux_tr
+        wallHeatFlux_ve
+        wallShearStress
+        frictionCoefficient
+        StantonNo
+        pressureCoefficient
+        Tt
+        Tv
+        U
+        p
+        kappatr
+        kappave
+    );
+
+    surfaces
+    (
+        WALL
+        {
+            type        patch;
+            patches     (WALL);
+            interpolate false;       // 直接取壁面面心值, 不做插值
+        }
+    );
+}
+
+// ************************************************************************* //

@@ -1,0 +1,67 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      surfaceCoefficients;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 壁面无量纲系数 FO (strath 库, 源码 src/functionObjects/field-cfdStrath/)
+// ─────────────────────────────────────────────────────────────────────────
+// 重要运行语义 (经源码核对, 2026-09):
+//   frictionCoefficient 与 StantonNo 在构造时对启动时刻目录做头检查
+//   (缺 0/wallShearStress 或 0/wallHeatFlux 文件直接 FatalError),
+//   且每次执行都从【启动时刻】目录重读 τ_w / q_w —
+//   全新首算读到的是 0/ 占位零值 → Cf/St 输出 0, 不可信!
+//   正确取值需【重启续算】: 先跑到首个输出时刻 (τ_w/q_w 写盘), 再
+//   startFrom latestTime 重启, FO 即读到真实值 (教程 backup-* 目录
+//   即为此工作流)。或改用后处理: 由 wallSurface 采样的 τ_w/q_w 按
+//   下式换算:
+//     Cf = |τ_w| / (0.5·ρ∞·U∞²)
+//     St = q_w / (0.5·ρ∞·U∞³)          [strath 约定]
+//   参考量 ρ∞/U∞ 均取 inflowPatchName patch 的第 0 个面值。
+//   pressureCoefficient 无此问题 (由 p 实时计算)。
+// ─────────────────────────────────────────────────────────────────────────
+// FO 生成场本身 AUTO_WRITE, 无需 writeFields 类开关
+
+// Stanton 数: St = q_w/(0.5·ρ∞·U∞³), q_w 取 wallHeatFlux (总热流)
+StantonNumber
+{
+    type            StantonNo;
+    wallHeatFlux    wallHeatFlux;    // 源热流场名 (可改 wallHeatFlux_tr/ve)
+    inflowPatchName INLET;           // ρ∞/U∞ 参考 patch
+    libs            ("libstrathFieldFunctionObjects.so");
+    writeControl    outputTime;
+    log             no;
+}
+
+// 摩擦系数: Cf = |τ_w|/(0.5·ρ∞·U∞²), τ_w 依赖 surfaceQuantities 先算好
+frictionCoefficient
+{
+    type            frictionCoefficient;
+    wallShearStress wallShearStress; // 源剪切场名
+    inflowPatchName INLET;
+    libs            ("libstrathFieldFunctionObjects.so");
+    writeControl    outputTime;
+    log             no;
+}
+
+// 压力系数: Cp = p/(0.5·ρ∞·U∞²) (注意: strath 定义不含 p∞ 压差项)
+pressureCoefficient
+{
+    type            pressureCoefficient;
+    inflowPatchName INLET;
+    libs            ("libstrathFieldFunctionObjects.so");
+    writeControl    outputTime;
+    log             no;
+}
+
+// ************************************************************************* //

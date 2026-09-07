@@ -80,10 +80,12 @@ downgradeToSingleTemperature yes;
 chemistryReader foam2ChemistryReader;
 
 // 反应机理文件 (相对于 $FOAM_CASE)
-foamChemistryFile "$FOAM_CASE/constant/chemDicts/hTCReactionsDPLR";
+// 模板配套 hTCReactionsQK: 纯 N2 冻结流 (无反应, chemistry active off)。
+// 换反应流算例时替换为对应机理文件, 并同步 hTCProperties 的 active 开关。
+foamChemistryFile "$FOAM_CASE/constant/hTCReactionsQK";
 
-// 组分热力学数据文件
-foamChemistryThermoFile "$FOAM_CASE/constant/thermoDEM_TRV";
+// 组分热力学数据文件 (模板配套: 纯 N2, 含全部 transport 模型系数)
+foamChemistryThermoFile "$FOAM_CASE/constant/thermoDEM";
 
 // 双温度模型字典 (振动松弛参数)
 twoTemperatureDictFile "$FOAM_CASE/constant/thermo2TModel";

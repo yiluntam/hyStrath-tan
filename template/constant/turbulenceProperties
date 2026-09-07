@@ -20,7 +20,13 @@ FoamFile
 //   laminar — 层流 (高超声速非平衡流常用)
 //   RAS     — 雷诺平均 Navier-Stokes (RANS)
 //   LES     — 大涡模拟
-//   DES     — 分离涡模拟
+//   DES     — 分离涡模拟 (v1706 中经 LESModel 名选择)
+// 高超声速非平衡边界层推荐 laminar: 压缩性修正 (compressible 模型族)
+// 对强非平衡热力学未必适配; 高 Re 数壁面流动可选 RAS。
+// 切换 RAS 时需同步:
+//   0/ 目录添加 k/omega (或 epsilon) 初始场文件
+//   system/fvSchemes 添加各湍流量 div(...) 条目
+//   system/fvSolution 添加 "(k|omega|epsilon)" 求解器条目
 simulationType  laminar;
 
 // ---- RAS 湍流模型 (仅 simulationType RAS 时有效) ----

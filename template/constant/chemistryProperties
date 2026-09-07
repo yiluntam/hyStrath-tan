@@ -19,6 +19,10 @@ FoamFile
 // chemistrySolver:
 //   Euler2Implicit     — 隐式欧拉 (推荐, 稳定性好)
 //   no2ChemistrySolver — 关闭化学求解器
+// chemistryThermo: hy2Foam 固定 rho2 (密度基双温度)
+// 与 hTCProperties 的耦合: 本文件 chemistry off 时化学求解器不步进;
+// hTCProperties 的 active off 时即使此处 on, 源项也不注入 —
+// 两个开关应保持一致 (冻结流两者均 off)
 chemistryType
 {
     chemistrySolver   Euler2Implicit;
@@ -31,7 +35,8 @@ chemistryType
 //   off — 冻结流 (无反应, 更快)
 chemistry           off;
 
-// 初始化学时间步长 (仅 chemistry on 时有效)
+// 初始化学时间步长 [s] (仅 chemistry on 时有效; 之后每步由
+// tc() 化学时间尺度与 cTauChem 共同决定)
 initialChemicalTimeStep 1.0e-9;
 
 // ---- 隐式欧拉求解器参数 ----
@@ -55,6 +60,8 @@ modifiedTemperatureCoeffs
 }
 
 // ---- 化学-振动耦合模型 ----
+// 仅两温模式 (downgradeToSingleTemperature no) 且 chemistry on 时生效:
+// 离解反应速率按振动温度修正 (离解优先从高振动能级发生)
 // chemistryVibrationCoupling.model:
 //   none    — 无耦合 (化学与振动能量无关)
 //   ParkTTv — Park T-Tv 双温度模型 (标准选项, 用于离解-振动耦合)
@@ -73,7 +80,7 @@ chemistryVibrationCoupling
 
     ParkTTvCoeffs
     {
-        exponentTtr         0.7;          // 平动温度指数
+        exponentTtr         0.6;          // 平动温度指数
         sourceTermModel     preferential; // 优先离解模型
 
         preferentialModel

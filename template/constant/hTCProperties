@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -16,31 +16,41 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // ---- 高焓热化学模型 (High-Temperature Chemistry) ----
-// hTC2Model:
-//   noHTC2<rho2ThermoHTC>       — 无 HTC 耦合, 基础热力学 (热平衡)
-//   noHTC2<rho2ChemistryHTC>    — 无 HTC 耦合, 含化学 (热平衡+化学反应)
-//   laminar2<rho2ThermoHTC>     — 层流 HTC, 基础热力学 (热非平衡)
-//   laminar2<rho2ChemistryHTC>  — 层流 HTC, 含化学 (热非平衡+化学反应, 推荐)
+// hTC2Model 类型矩阵 (尖括号内 = 组合的热物理/化学模型类型):
+//   noHTC2<rho2ThermoHTC>       — 无 HTC 耦合, 无反应源 (R/dQ/Sh 恒零)
+//   noHTC2<rho2ChemistryHTC>    — 无 HTC 耦合, 但保留化学接口
+//   laminar2<rho2ThermoHTC>     — 层流 HTC, 纯热力学 (无反应机理)
+//   laminar2<rho2ChemistryHTC>  — 层流 HTC, 含化学 (推荐反应流配置)
+// (湍流反应另有对应类型, hy2Foam 常用层流假定 + RANS 应力)
 //
-// active:
-//   on  — 开启热非平衡求解 (求解 Tv 方程)
-//   off — 关闭 HTC 模块 (热平衡或冻结流)
+// active 的真实语义 (经源码核对, hTC2Model.C:56 + laminar2.C):
+//   该开关只门控化学反应源项的注入与求解 (R() 组分源, dQ() 化学释热,
+//   tc() 化学时间尺度, correct() 化学求解器步进), 默认 true
+//   — 它不控制两温方程组是否求解!
+// 两温/热平衡由 constant/thermophysicalProperties 的
+// downgradeToSingleTemperature / downgradeToSingleTv 控制。
+// 冻结流应与 chemistryProperties 的 chemistry off 保持一致。
 hTC2Model  laminar2<rho2ChemistryHTC>;
 
 active     off;
 
+// laminar2 系数子字典:
+//   maxIntegrationTime — LTS (localEuler ddtScheme) 下化学源积分的
+//     时间上限 [s]; 仅 fvSchemes ddtSchemes("Yi") = localEuler 时读取
 laminar2Coeffs
 {}
 
 // ---- 混合物输出控制 ----
+// 置 on 后每次写场时额外输出对应混合物量 (functionObject 无关,
+// 由 thermo 组分对象直接写出)
 mixtureOutputs
 {
-    molarFraction       off;   // 摩尔分数
-    numberDensity       off;   // 数密度
-    partialDensity      off;   // 分密度
-    partialPressure     off;   // 分压
-    degreesOfFreedom    off;   // 自由度
-    vibrationalEnergy   off;   // 振动能
+    molarFraction       off;   // 摩尔分数 X_i
+    numberDensity       off;   // 数密度 n_i [1/m³]
+    partialDensity      off;   // 分密度 ρ_i [kg/m³] (即 pD, 求解内部量)
+    partialPressure     off;   // 分压 p_i [Pa]
+    degreesOfFreedom    off;   // 自由度 f_i
+    vibrationalEnergy   off;   // 振动能 e_v,i [J/kg]
 }
 
 // ************************************************************************* //

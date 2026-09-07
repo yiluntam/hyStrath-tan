@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -13,6 +13,11 @@ FoamFile
     object      p;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 压力场 — 密度基求解器中的导出量:
+// p 不是独立求解变量, 由 pEqn.H 每步从 ρ/e/(Y_i) 经状态方程重构
+// (perfect2Gas: p = ρ·R·T), 此处 0/ 文件仅提供初始值与边界处理
+// 出现欠松弛/超松弛设置时 p 边界法向梯度通常保持零梯度
 
 #include "include/initialConditions"
 
@@ -28,6 +33,7 @@ boundaryField
         value           uniform $pressureInlet;
     }
 
+    // 壁面: ∂p/∂n = 0 (边界层近似)
     WALL
     {
         type            zeroGradient;  // ∂p/∂n = 0 (边界层近似)
@@ -36,4 +42,4 @@ boundaryField
     #include "include/boundaries"
 }
 
-// ************************************************************************* //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

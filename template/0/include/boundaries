@@ -1,9 +1,9 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1706                                 |
-|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
-|    \\/     M anipulation  |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  v1706                                 |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -18,6 +18,46 @@ FoamFile
 //
 // 注意: 边界 patch 名称必须与网格中的名称完全匹配
 // 如果你用 gmsh/fluent 网格, patch 名称可能不同, 需要相应修改
+//
+// =====================================================================
+// hy2Foam 可用边界条件速查 (关键字经源码核对, 2026-09)
+//
+// [求解器自带, 编译进 libhyTwoFoam, 自动链接, 无需 libs 条目]
+//   T/Tt 壁面:
+//     nonEqSmoluchowskiJumpT     平动温度跳跃 (Smoluchowski)
+//     字典关键字: U|rho|mu|alpha|gammatr|mfp (场名, 可省略, 默认同名),
+//       accommodationCoeff (必填, 标量, 0<α≤1 否则启动报错),
+//       Twall (必填, uniform 值或场), value
+//   Tv 壁面 (两温模式):
+//     nonEqSmoluchowskiJumpTv    逐组分振动温度跳跃
+//     nonEqSmoluchowskiJumpTvMix 混合物统一 Tv 跳跃 (downgradeToSingleTv yes)
+//       字典关键字: U|rho|mu|alphave|gammatr|mfp (场名可省略),
+//       accommodationCoeff (必填, 0<α≤1), Twall (必填), value
+//   U 壁面:
+//     nonEqMaxwellSlipU          一阶 Maxwell 速度滑移
+//       字典关键字: Tt|rho|mu|tauMC|mfp (场名可省略),
+//       accommodationCoeff (必填), Uwall (默认 (0 0 0)),
+//       thermalCreep (默认 true), curvature (默认 true)
+//   rho 边界:
+//     fixedRho                   定密度 (fixedValue 的可压缩等价)
+//       字典关键字: p|psi (场名, 默认 "p"/"thermo:psi")
+//
+// [strathFiniteVolume 库, 需在 controlDict libs 中加载
+//  "libstrathFiniteVolume.so"]
+//     nonCatalytic               非催化壁 (组分; 表面复合速率控制)
+//     rampInlet                  斜坡入口 (值随时间线性上升)
+//
+// [标准 OpenFOAM 常用]
+//     fixedValue / zeroGradient / symmetry / empty
+//     supersonicFreestream / waveTransmissive (出口防反射)
+//     turbulentIntensityKineticEnergyInlet 等 (RANS 入口)
+//
+// mfp/mu/alphave/tauMC 等场由求解器始终注册 (不存在查找失败问题),
+// 但其边界值是否按物理模型更新由 transportProperties 的
+// rarefiedParameters 开关控制: 使用跳跃/滑移 BC 时须保持
+// computeMfpBoundaries yes (模板默认), 否则 mfp 边界值停留在初值 0,
+// 跳跃/滑移条件退化为非物理
+// =====================================================================
 
 // -- 对称面 (2D 平面算例) --
 SYM
@@ -26,6 +66,7 @@ SYM
 }
 
 // -- 超声速出口 (零梯度外推) --
+// 改用防反射: type waveTransmissive; (需 gamma 字段, 见 OpenFOAM 文档)
 OUTLET
 {
     type            zeroGradient;
