@@ -1,8 +1,8 @@
 /*---------------------------------------------------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | Copyright (C) 2016-2021 hyStrath
+   \\    /   O peration     | Copyright (C) 2016-2021 hyStrath
+    \\  /    A nd           | Copyright (C) 2016-2021 OpenCFD Ltd.
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,18 +22,55 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::nonEqSmoluchowskiJumpTFvPatchScalarField
+    Foam::nonEqScottCatalyticProductYFvPatchScalarField
 
 Description
-    Smoluchowski temperature jump boundary condition
+    Catalytic recombination-product wall boundary condition, to be used on
+    the molecular species produced by the surface recombination (e.g. N2
+    for N recombination) on patches where the atomic species uses
+    nonEqScottCatalyticY.
+
+    复合产物组分的催化壁面边界条件，与原子组分的 nonEqScottCatalyticY
+    配套用于同一壁面（例如 N 复合时用于 N2）。
+
+    The recombined mass re-enters the gas phase as a diffusive influx of
+    the product species, omega taken from the atom BC:
+        snGrad(Y_product) = omega/rhoD
+    i.e. a mixed condition with valueFraction = 0, refValue = 0,
+    refGrad = omega/rhoD. Together with the atom Robin condition this
+    closes the wall mass balance (sum of the wall diffusive fluxes is
+    zero).
+
+    复合质量以产物组分的扩散入流通量回到气相，ω 取自原子 BC：
+    snGrad(Y_产物) = ω/ρD（valueFraction = 0 的 mixed 形式）。
+    与原子 Robin 条件联立闭合壁面质量平衡（壁面扩散通量之和为零）。
+
+Usage
+    \table
+        Property   | Description                       | Required | Default
+        atomField  | 原子组分场名（须为 nonEqScottCatalyticY） | yes | -
+    \endtable
+
+    Example of the boundary condition specification:
+    \verbatim
+    <patchName>
+    {
+        type            nonEqScottCatalyticProductY;
+        atomField       N;
+        value           uniform 0.8;
+    }
+    \endverbatim
+
+See also
+    Foam::nonEqScottCatalyticYFvPatchScalarField
 
 SourceFiles
-    nonEqSmoluchowskiJumpTFvPatchScalarField.C
+    nonEqScottCatalyticProductYFvPatchScalarField.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef nonEqSmoluchowskiJumpTFvPatchScalarFields_H
-#define nonEqSmoluchowskiJumpTFvPatchScalarFields_H
+#ifndef nonEqScottCatalyticProductYFvPatchScalarField_H
+#define nonEqScottCatalyticProductYFvPatchScalarField_H
 
 #include "mixedFvPatchFields.H"
 
@@ -43,68 +80,47 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                 Class smoluchowskiJumpTFvPatch Declaration
+        Class nonEqScottCatalyticProductYFvPatchScalarField Declaration
 \*---------------------------------------------------------------------------*/
 
-class nonEqSmoluchowskiJumpTFvPatchScalarField
+class nonEqScottCatalyticProductYFvPatchScalarField
 :
     public mixedFvPatchScalarField
 {
-
     // Private data
 
-        //- Velocity field name, default = "U"
-        word UName_;
+        //- Name of the recombining atomic species field 原子组分场名
+        word atomFieldName_;
 
-        //- Density field name, default = "rho"
-        word rhoName_;
-
-        //- Dynamic viscosity field name, default = "mu"
-        word muName_;
-
-        //- Thermal diffusivity field name, default = "alpha"
-        word alphaName_;
-
-        //- Ratio of specific heat capacities field name, default = "gammatr"
-        word gammaName_;
-
-        //- Mean free path field name, default = "mfp"
-        word mfpName_;
-
-        //- Accommodation coefficient
-        scalar accommodationCoeff_;
-
-        //- Wall surface temperature
-        scalarField Twall_;
 
 public:
 
     //- Runtime type information
-    TypeName("nonEqSmoluchowskiJumpT");
+    TypeName("nonEqScottCatalyticProductY");
 
 
     // Constructors
 
         //- Construct from patch and internal field
-        nonEqSmoluchowskiJumpTFvPatchScalarField
+        nonEqScottCatalyticProductYFvPatchScalarField
         (
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&
         );
 
         //- Construct from patch, internal field and dictionary
-        nonEqSmoluchowskiJumpTFvPatchScalarField
+        nonEqScottCatalyticProductYFvPatchScalarField
         (
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const dictionary&
         );
 
-        //- Construct by mapping given nonEqSmoluchowskiJumpTFvPatchScalarField
+        //- Construct by mapping given nonEqScottCatalyticProductYFvPatchScalarField
         //  onto a new patch
-        nonEqSmoluchowskiJumpTFvPatchScalarField
+        nonEqScottCatalyticProductYFvPatchScalarField
         (
-            const nonEqSmoluchowskiJumpTFvPatchScalarField&,
+            const nonEqScottCatalyticProductYFvPatchScalarField&,
             const fvPatch&,
             const DimensionedField<scalar, volMesh>&,
             const fvPatchFieldMapper&
@@ -115,14 +131,14 @@ public:
         {
             return tmp<fvPatchScalarField>
             (
-                new nonEqSmoluchowskiJumpTFvPatchScalarField(*this)
+                new nonEqScottCatalyticProductYFvPatchScalarField(*this)
             );
         }
 
         //- Construct as copy setting internal field reference
-        nonEqSmoluchowskiJumpTFvPatchScalarField
+        nonEqScottCatalyticProductYFvPatchScalarField
         (
-            const nonEqSmoluchowskiJumpTFvPatchScalarField&,
+            const nonEqScottCatalyticProductYFvPatchScalarField&,
             const DimensionedField<scalar, volMesh>&
         );
 
@@ -134,40 +150,24 @@ public:
         {
             return tmp<fvPatchScalarField>
             (
-                new nonEqSmoluchowskiJumpTFvPatchScalarField(*this, iF)
+                new nonEqScottCatalyticProductYFvPatchScalarField(*this, iF)
             );
         }
 
-        // Mapping functions
 
-            //- Map (and resize as needed) from self given a mapping object
-            virtual void autoMap
-            (
-                const fvPatchFieldMapper&
-            );
+    // Member functions
 
-            //- Reverse map the given fvPatchField onto this fvPatchField
-            virtual void rmap
-            (
-                const fvPatchField<scalar>&,
-                const labelList&
-            );
+        //- Map (and resize as needed) from self given a mapping object
+        virtual void autoMap(const fvPatchFieldMapper&);
+
+        //- Reverse map the given fvPatchField onto this fvPatchField
+        virtual void rmap(const fvPatchField<scalar>&, const labelList&);
 
 
         // Evaluation functions
 
             //- Update the coefficients associated with the patch field
             virtual void updateCoeffs();
-
-
-        // Access functions
-
-            //- Return the wall surface temperature
-            //  用于催化壁面条件取用同一壁面温度（同源）
-            const scalarField& Twall() const
-            {
-                return Twall_;
-            }
 
 
         //- Write

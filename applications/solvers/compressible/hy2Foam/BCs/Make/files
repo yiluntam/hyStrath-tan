@@ -7,4 +7,8 @@ T/nonEqSmoluchowskiJumpT/nonEqSmoluchowskiJumpTFvPatchScalarField.C
 T/nonEqSmoluchowskiJumpTv/nonEqSmoluchowskiJumpTvFvPatchScalarField.C
 T/nonEqSmoluchowskiJumpTvMix/nonEqSmoluchowskiJumpTvMixFvPatchScalarField.C
 
+Y/nonEqScottCatalyticY/nonEqScottCatalyticYFvPatchScalarField.C
+Y/nonEqScottCatalyticProductY/nonEqScottCatalyticProductYFvPatchScalarField.C
+Y/nonEqSuperCatalyticY/nonEqSuperCatalyticYFvPatchScalarField.C
+
 LIB = $(FOAM_USER_LIBBIN)/libhyTwoFoam

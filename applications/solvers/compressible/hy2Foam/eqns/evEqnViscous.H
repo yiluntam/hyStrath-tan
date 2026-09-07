@@ -41,6 +41,20 @@ if (!inviscid)
                 );
         }
 
+        // Catalytic wall: boundary completion of the vibro-electronic
+        // share of this species (the interior source term has zero
+        // boundary values)
+        // 催化壁面：本组分振电份额的边界完成项
+        if (catalyticWallPresent)
+        {
+            evEqnViscous +=
+                fvc::div
+                (
+                    catalyticFluxVeK()[speciei],
+                    "div(diffusiveFluxes)"
+                );
+        }
+
         evEqnViscous.setValues(removedCellsFromMatrix, valuesToImpose);
 
         evEqnViscous.solve();

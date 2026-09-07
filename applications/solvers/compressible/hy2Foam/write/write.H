@@ -137,6 +137,55 @@ if (writeWallHeatFlux)
     }
     Info<< endl;
 
+    // Catalytic contribution to the wall heat flux (absolute-enthalpy
+    // basis: includes the full recombination heat omega*Delta_h_recomb;
+    // positive into the wall). Reported separately from the diffusive
+    // item, which contains the same flux on the sensible/absolute basis
+    // used by getDiffusiveWallHeatFlux().
+    // 壁面热流的催化分量（绝对焓基准，含全部复合反应热；指向壁面
+    // 为正），单独报告。
+    if (catalyticWallPresent)
+    {
+        Info<< "Integrated catalytic wall heat flux [W]" << endl;
+
+        forAll(catalyticPatchIDs, i)
+        {
+            const label patchi = catalyticPatchIDs[i];
+
+            const scalar int_cat_whf =
+                gSum
+                (
+                    mesh.magSf().boundaryField()[patchi]
+                   *wallHeatFlux_cat.boundaryField()[patchi]
+                );
+
+            // Share of the total wall heat flux of the same patch
+            // (Goulard-type diagnostic)
+            // 同壁面总热流中的占比（Goulard 型诊断量）
+            scalar int_cat_ratio_whf = 0.0;
+
+            const scalar int_tot_patch_whf =
+                gSum
+                (
+                    mesh.magSf().boundaryField()[patchi]
+                   *wallHeatFlux.boundaryField()[patchi]
+                );
+
+            if (mag(int_tot_patch_whf) > SMALL)
+            {
+                int_cat_ratio_whf = int_cat_whf/int_tot_patch_whf*100.0;
+            }
+
+            Info<< "Patch " << patchi
+                << " named " << mesh.boundaryMesh()[patchi].name()
+                << ": " << int_cat_whf << nl
+                << "   catalytic (% of total): " << int_cat_ratio_whf << nl
+                << endl;
+        }
+
+        wallHeatFlux_cat.write();
+    }
+
     wallHeatFlux.write();
     wallHeatFlux_tr.write();
     wallHeatFlux_ve.write();

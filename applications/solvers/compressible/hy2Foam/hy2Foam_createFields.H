@@ -6,6 +6,9 @@
 #include "createReactingFields.H"
 #include "createVibrationalFields.H"
 
+// --- Detection of catalytic wall boundary conditions
+#include "createCatalyticFields.H"
+
 // --- Initialisation of MHD fields
 #include "createEMFields.H"
 

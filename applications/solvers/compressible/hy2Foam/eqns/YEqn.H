@@ -121,3 +121,9 @@ else
 }
 
 transport().correct();
+
+// --- Catalytic wall: refresh the boundary completion fluxes for the
+//     energy equations (uses the current species boundary values and the
+//     same rhoD fields as the species equations)
+// 催化壁面：刷新能量方程的边界完成通量（无催化壁面时为空操作）
+#include "catalyticWallSources.H"
