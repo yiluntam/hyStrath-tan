@@ -4,6 +4,11 @@
 // WENO-Z-5: 5 单元模板 → 3 个 3 单元候选模板, γ=(0.1, 0.6, 0.3)
 // WENO-Z-7: 7 单元模板 → 4 个 4 单元候选模板, γ=(1/35, 12/35, 18/35, 4/35)
 //
+// 权重采用 Borges et al. (2008) 的标准 WENO-Z 形式:
+//   α_k = γ_k (1 + (τ/β_k)²),   ω_k = α_k / Σ α_j
+// 其中 τ₅ = |β₀ - β₂| (5 阶), τ₇ = |β₀ + 3β₁ - 3β₂ - β₃| (7 阶推广)。
+// β_k 为 Jiang-Shu 光滑度指示器, 依积分胞元位置逐个计算 (见 beta4JS)。
+//
 // 标量和矢量版本。矢量版本逐分量应用 WENO 权重。
 //------------------------------------------------------------------------------
 
@@ -13,6 +18,7 @@
 #include "scalar.H"
 #include "vector.H"
 #include "FixedList.H"
+#include "label.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -47,7 +53,7 @@ inline scalar wenoZ5_faceL
     const scalar b2 = (13.0/12.0)*sqr(uC - 2.0*uP1 + uP2)
                     + (1.0/4.0)*sqr(3.0*uC - 4.0*uP1 + uP2);
 
-    // 全局光滑度参考 τ₅ = |β₀ - β₂|
+    // 全局光滑度参考 τ₅ = |β₀ - β₂|  (Borges 2008, 式 (3.8))
     const scalar tau5 = mag(b0 - b2);
 
     // 线性权重
@@ -55,10 +61,10 @@ inline scalar wenoZ5_faceL
     const scalar g1 = 0.6;
     const scalar g2 = 0.3;
 
-    // WENO-Z 权重: α_k = γ_k * (1 + τ₅/(β_k + ε))
-    const scalar a0 = g0*(1.0 + tau5/(b0 + eps));
-    const scalar a1 = g1*(1.0 + tau5/(b1 + eps));
-    const scalar a2 = g2*(1.0 + tau5/(b2 + eps));
+    // WENO-Z 权重: α_k = γ_k * (1 + (τ₅/(β_k + ε))²)   (Borges 2008, 式 (3.9))
+    const scalar a0 = g0*(1.0 + sqr(tau5/(b0 + eps)));
+    const scalar a1 = g1*(1.0 + sqr(tau5/(b1 + eps)));
+    const scalar a2 = g2*(1.0 + sqr(tau5/(b2 + eps)));
     const scalar aSum = a0 + a1 + a2;
 
     // 归一化权重
@@ -102,9 +108,10 @@ inline scalar wenoZ5_faceR
     const scalar g1 = 0.6;
     const scalar g2 = 0.3;
 
-    const scalar a0 = g0*(1.0 + tau5/(b0 + eps));
-    const scalar a1 = g1*(1.0 + tau5/(b1 + eps));
-    const scalar a2 = g2*(1.0 + tau5/(b2 + eps));
+    // WENO-Z 权重 (Borges 2008): α_k = γ_k * (1 + (τ₅/(β_k + ε))²)
+    const scalar a0 = g0*(1.0 + sqr(tau5/(b0 + eps)));
+    const scalar a1 = g1*(1.0 + sqr(tau5/(b1 + eps)));
+    const scalar a2 = g2*(1.0 + sqr(tau5/(b2 + eps)));
     const scalar aSum = a0 + a1 + a2;
 
     return (a0*p0 + a1*p1 + a2*p2)/aSum;
@@ -121,34 +128,38 @@ inline scalar wenoZ5_faceR
 // v2: S2 = {i-1, i, i+1, i+2}  → u^L_{i+1/2} = (-u_{i-1} + 7u_i + 7u_{i+1} - u_{i+2})/12
 // v3: S3 = {i, i+1, i+2, i+3}  → u^L_{i+1/2} = (3u_i + 13u_{i+1} - 5u_{i+2} + u_{i+3})/12
 
-// --- 4-cell smoothness indicator (Jiang-Shu 1996) ---
-// β = c1*(v1²+v2²+v3²) + c2*(d1²+d2²) + c3*t²
-//   where v_i are 1st undivided diffs, d_i 2nd diffs, t the 3rd diff
-inline scalar beta4
+// --- Jiang-Shu 规范光滑度指示器 (r=4 子模板, 4 个胞平均) ---
+// β = Σ_{l=1..3} ∫_{cell p} (q^(l))² dx, q 为过 {f0,f1,f2,f3} 胞平均的
+// 三次多项式; p 为积分胞元在子模板内的局部序号 (0..3)。
+// 各子模板的积分胞元均取靠近界面的单元: 左状态时为 cell i
+// (在各子模板中的局部序号依次为 3,2,1,0), 右状态时为 cell i+1
+// (局部序号 0,1,2,3)。光滑区 β_k ~ (u'Δx)², τ₇ = O(Δx⁷)。
+// 系数由精确符号推导并与数值积分核对 (p=0 ↔ p=3, p=1 ↔ p=2 对称)
+inline scalar beta4JS
 (
-    const scalar f0, const scalar f1, const scalar f2, const scalar f3
+    const scalar f0, const scalar f1, const scalar f2, const scalar f3,
+    const label p
 )
 {
-    // 1st undivided differences
     const scalar v1 = f1 - f0;
     const scalar v2 = f2 - f1;
     const scalar v3 = f3 - f2;
 
-    // 2nd undivided differences
-    const scalar d1 = f0 - 2.0*f1 + f2;
-    const scalar d2 = f1 - 2.0*f2 + f3;
-
-    // 3rd undivided difference
-    const scalar t = -f0 + 3.0*f1 - 3.0*f2 + f3;
-
-    // 系数通过 Taylor 展开确定 (对应 4 阶多项式的光滑度度量)
-    // 这些系数确保 β 在光滑区域 ∝ O(Δx²)
-    return (v1*(547.0*v1 - 2522.0*v2 + 3441.0*v3)
-          + v2*(3043.0*v2 - 8534.0*v3)
-          + v3*(6243.0*v3)
-          + d1*(547.0*d1 - 2522.0*d2)
-          + d2*(3043.0*d2)
-          + 547.0*sqr(t)) / 240.0;
+    switch (p)
+    {
+        case 0:
+            return (2107.0*sqr(v1) - 5188.0*v1*v2 + 1854.0*v1*v3
+                  + 3708.0*sqr(v2) - 2788.0*v2*v3 +  547.0*sqr(v3))/240.0;
+        case 1:
+            return ( 547.0*sqr(v1) - 1428.0*v1*v2 +  494.0*v1*v3
+                  + 1468.0*sqr(v2) - 1108.0*v2*v3 +  267.0*sqr(v3))/240.0;
+        case 2:
+            return ( 267.0*sqr(v1) - 1108.0*v1*v2 +  494.0*v1*v3
+                  + 1468.0*sqr(v2) - 1428.0*v2*v3 +  547.0*sqr(v3))/240.0;
+        default: // p == 3
+            return ( 547.0*sqr(v1) - 2788.0*v1*v2 + 1854.0*v1*v3
+                  + 3708.0*sqr(v2) - 5188.0*v2*v3 + 2107.0*sqr(v3))/240.0;
+    }
 }
 
 
@@ -169,13 +180,18 @@ inline scalar wenoZ7_faceL
     const scalar v3 = (                             3.0*uC + 13.0*uP1 - 5.0*uP2 + uP3)/12.0;
 
     // 光滑度指示器
-    const scalar b0 = beta4(uM3, uM2, uM1, uC);
-    const scalar b1 = beta4(uM2, uM1, uC, uP1);
-    const scalar b2 = beta4(uM1, uC, uP1, uP2);
-    const scalar b3 = beta4(uC, uP1, uP2, uP3);
+    // JS 规范: 左状态的积分胞元为紧邻界面的 cell i, 在 4 个子模板
+    //   (自左向右偏置) 中的局部序号依次为 3, 2, 1, 0
+    const scalar b0 = beta4JS(uM3, uM2, uM1, uC, 3);
+    const scalar b1 = beta4JS(uM2, uM1, uC, uP1, 2);
+    const scalar b2 = beta4JS(uM1, uC, uP1, uP2, 1);
+    const scalar b3 = beta4JS(uC, uP1, uP2, uP3, 0);
 
-    // 全局光滑度 τ₇ = |β₀ - 3β₁ + 3β₂ - β₃|
-    const scalar tau7 = mag(b0 - 3.0*b1 + 3.0*b2 - b3);
+    // 全局光滑度 τ₇ = |β₀ + 3β₁ - 3β₂ - β₃| = O(Δx⁷)  (Borges 7 阶推广)
+    // 系数 (1,3,-3,-1) 为唯一能消去 β 组合中 h², h⁴, h⁵, h⁶ 项的组合
+    // (h⁵ 项系数在四个子模板中为 (-1/2, 1/6, -1/6, 1/2)f'f⁗);
+    // 若取三阶差分型 (1,-3,3,-1), τ₇ 退化为 O(h⁵)。
+    const scalar tau7 = mag(b0 + 3.0*b1 - 3.0*b2 - b3);
 
     // 线性权重
     const scalar g0 =  1.0/35.0;
@@ -183,11 +199,11 @@ inline scalar wenoZ7_faceL
     const scalar g2 = 18.0/35.0;
     const scalar g3 =  4.0/35.0;
 
-    // WENO-Z 权重
-    const scalar a0 = g0*(1.0 + tau7/(b0 + eps));
-    const scalar a1 = g1*(1.0 + tau7/(b1 + eps));
-    const scalar a2 = g2*(1.0 + tau7/(b2 + eps));
-    const scalar a3 = g3*(1.0 + tau7/(b3 + eps));
+    // WENO-Z 权重 (Borges 2008): α_k = γ_k * (1 + (τ₇/(β_k + ε))²)
+    const scalar a0 = g0*(1.0 + sqr(tau7/(b0 + eps)));
+    const scalar a1 = g1*(1.0 + sqr(tau7/(b1 + eps)));
+    const scalar a2 = g2*(1.0 + sqr(tau7/(b2 + eps)));
+    const scalar a3 = g3*(1.0 + sqr(tau7/(b3 + eps)));
     const scalar aSum = a0 + a1 + a2 + a3;
 
     return (a0*v0 + a1*v1 + a2*v2 + a3*v3)/aSum;
@@ -215,22 +231,26 @@ inline scalar wenoZ7_faceR
     const scalar v3 = (                             3.0*uP1 + 13.0*uC - 5.0*uM1 + uM2)/12.0;
 
     // 光滑度指示器
-    const scalar b0 = beta4(uP4, uP3, uP2, uP1);
-    const scalar b1 = beta4(uP3, uP2, uP1, uC);
-    const scalar b2 = beta4(uP2, uP1, uC, uM1);
-    const scalar b3 = beta4(uP1, uC, uM1, uM2);
+    // JS 规范: 右状态的积分胞元为紧邻界面的 cell i+1, 在 4 个子模板
+    //   (自右向左偏置) 中的局部序号依次为 0, 1, 2, 3
+    const scalar b0 = beta4JS(uP1, uP2, uP3, uP4, 0);
+    const scalar b1 = beta4JS(uC, uP1, uP2, uP3, 1);
+    const scalar b2 = beta4JS(uM1, uC, uP1, uP2, 2);
+    const scalar b3 = beta4JS(uM2, uM1, uC, uP1, 3);
 
-    const scalar tau7 = mag(b0 - 3.0*b1 + 3.0*b2 - b3);
+    // 全局光滑度 τ₇ = |β₀ + 3β₁ - 3β₂ - β₃| = O(Δx⁷), 与 faceL 同一表达式
+    const scalar tau7 = mag(b0 + 3.0*b1 - 3.0*b2 - b3);
 
     const scalar g0 =  1.0/35.0;
     const scalar g1 = 12.0/35.0;
     const scalar g2 = 18.0/35.0;
     const scalar g3 =  4.0/35.0;
 
-    const scalar a0 = g0*(1.0 + tau7/(b0 + eps));
-    const scalar a1 = g1*(1.0 + tau7/(b1 + eps));
-    const scalar a2 = g2*(1.0 + tau7/(b2 + eps));
-    const scalar a3 = g3*(1.0 + tau7/(b3 + eps));
+    // WENO-Z 权重 (Borges 2008): α_k = γ_k * (1 + (τ₇/(β_k + ε))²)
+    const scalar a0 = g0*(1.0 + sqr(tau7/(b0 + eps)));
+    const scalar a1 = g1*(1.0 + sqr(tau7/(b1 + eps)));
+    const scalar a2 = g2*(1.0 + sqr(tau7/(b2 + eps)));
+    const scalar a3 = g3*(1.0 + sqr(tau7/(b3 + eps)));
     const scalar aSum = a0 + a1 + a2 + a3;
 
     return (a0*v0 + a1*v1 + a2*v2 + a3*v3)/aSum;

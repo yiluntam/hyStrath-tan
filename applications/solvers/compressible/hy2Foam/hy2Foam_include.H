@@ -29,9 +29,14 @@
 #include "numerics/KNP.H"
 #include "numerics/KT.H"
 #include "numerics/AUSM_Flux.H"
+#include "numerics/Roe_Flux.H"
 #include "numerics/MUSCL_Kernels.H"
 #include "numerics/WENOZ_Kernels.H"
 #include "numerics/highOrderKernels.H"
+
+// --- Processor-boundary ghost-layer exchange (parallel MUSCL/WENO stencils)
+#include "PstreamBuffers.H"
+#include "processorPolyPatch.H"
 
 // --- MHD library
 #include "mhdModel.H"

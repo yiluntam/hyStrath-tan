@@ -99,13 +99,26 @@ Info<< "Structured stencil: " << nAxisFaces << " / "
     << (nInternalFaces > 0 ? 100.0*nAxisFaces/nInternalFaces : 0.0)
     << " %)" << endl;
 
-// 标记是否使用结构化模板 (>90% 轴对齐面)
+// 标记是否使用结构化模板 (要求全部内部面轴对齐)
 isStructuredGrid = (nInternalFaces > 0)
-                && (scalar(nAxisFaces)/scalar(nInternalFaces) > 0.9);
+                && (nAxisFaces == nInternalFaces);
 
+// MUSCL/WENO 依赖轴对齐方向链模板: 非轴对齐面会静默回落到二阶 TVD 插值,
+// 丢失高阶精度, 因此检测不通过时直接退出 (不再静默降级)
 if (!isStructuredGrid)
 {
-    Info<< "WARNING: Less than 90% axis-aligned faces. "
-        << "MUSCL/WENO will fall back to upwind at non-axis-aligned faces."
-        << endl;
+    FatalErrorIn
+    (
+        "structuredStencilBuild"
+    )   << "fluxScheme " << fluxScheme
+        << " (convSchemes " << convSchemes << ") requires a fully "
+        << "axis-aligned structured hexahedral mesh, but only "
+        << nAxisFaces << " of " << nInternalFaces << " internal faces ("
+        << (nInternalFaces > 0 ? 100.0*nAxisFaces/nInternalFaces : 0.0)
+        << " %) are axis-aligned." << nl
+        << "Non-axis-aligned faces would silently fall back to 2nd-order "
+        << "TVD interpolation and lose the requested high-order accuracy." << nl
+        << "Use fluxScheme Kurganov (works on any mesh) or regenerate the "
+        << "mesh with axis-aligned blocks (e.g. blockMesh)."
+        << abort(FatalError);
 }

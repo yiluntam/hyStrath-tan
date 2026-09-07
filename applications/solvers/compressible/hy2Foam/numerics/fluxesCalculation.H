@@ -3,9 +3,8 @@ if
 (
     fluxScheme == "Kurganov"
  or fluxScheme == "Tadmor"
- or fluxScheme == "MUSCL_AUSM"
- or fluxScheme == "WENOZ_AUSM"
- or fluxScheme == "WENOZ7_AUSM"
+ or fluxScheme == "AUSM"
+ or fluxScheme == "Roe"
 )
 {
     label pDListSizes = phiEvk.size();
