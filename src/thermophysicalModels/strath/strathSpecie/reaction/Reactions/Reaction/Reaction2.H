@@ -134,7 +134,7 @@ private:
     // Private data
 
         //- Name of reaction
-        const word name_;
+        word name_;
 
         //- List of specie names present in reaction system
         const speciesTable& species_;

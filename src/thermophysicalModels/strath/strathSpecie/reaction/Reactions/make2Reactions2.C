@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "reaction2Types.H"
-#include "make2Reaction.H"
+#include "make2Reaction2.H"
 
 #include "Arrhenius2ReactionRate.H"
 #include "HoffertLienReactionRate.H"

@@ -211,25 +211,15 @@ public:
             }
 
             //- Return amplitude
-            scalar amplitude() const
+            const Function1<scalar>& amplitude() const
             {
-                return amplitude_;
-            }
-
-            scalar& amplitude()
-            {
-                return amplitude_;
+                return amplitude_();
             }
 
             //- Return timeDuration
-            scalar timeDuration() const
+            const Function1<scalar>& timeDuration() const
             {
-                return timeDuration_;
-            }
-
-            scalar& timeDuration()
-            {
-                return timeDuration_;
+                return timeDuration_();
             }
 
 

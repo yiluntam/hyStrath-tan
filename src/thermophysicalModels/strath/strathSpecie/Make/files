@@ -1,4 +1,4 @@
 specie/advancedSpecie/advancedSpecie.C
-reaction/reactions/make2Reactions.C
+reaction/Reactions/make2Reactions2.C
 
 LIB = $(FOAM_USER_LIBBIN)/libstrathSpecie
